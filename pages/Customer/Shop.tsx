@@ -188,9 +188,11 @@ export const Shop: React.FC = () => {
                         View All <ArrowRight className="w-4 h-4" />
                     </Link>
                </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-2">
                   {newArrivals.slice(0, 4).map(product => (
-                      <ProductCard key={product._id} product={product} />
+                      <div key={product._id} className="flex-shrink-0 w-72 md:w-auto snap-start">
+                        <ProductCard product={product} />
+                      </div>
                   ))}
               </div>
           </section>
@@ -208,9 +210,11 @@ export const Shop: React.FC = () => {
                         View All <ArrowRight className="w-4 h-4" />
                     </Link>
                </div>
-               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+               <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-2">
                   {featuredProducts.slice(0, 4).map(product => (
-                      <ProductCard key={product._id} product={product} />
+                      <div key={product._id} className="flex-shrink-0 w-72 md:w-auto snap-start">
+                        <ProductCard product={product} />
+                      </div>
                   ))}
               </div>
           </section>
@@ -233,8 +237,8 @@ export const Shop: React.FC = () => {
       
       {/* 5. Products Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map(i => (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
             <div key={i} className="bg-white rounded-xl p-4 h-80 animate-pulse border border-slate-100">
               <div className="bg-slate-200 h-48 rounded-lg mb-4"></div>
               <div className="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
@@ -243,8 +247,8 @@ export const Shop: React.FC = () => {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {filteredProducts.map(product => (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-12">
+          {(isHomeView ? filteredProducts.slice(0, 8) : filteredProducts).map(product => (
              <ProductCard key={product._id} product={product} />
           ))}
         </div>
