@@ -1,22 +1,29 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ShoppingCart, Box, Wand2, Send, Smartphone, Truck, RefreshCw, ShieldCheck } from 'lucide-react';
+import { ShoppingCart, Box, Wand2, Send, Smartphone, Truck, RefreshCw, ShieldCheck, Image as ImageIcon, CheckCircle } from 'lucide-react';
 import { Product } from '../../types';
 import { db } from '../../services/db';
-import { generateProductDescription, askProductAssistant } from '../../services/gemini';
+import { askProductAssistant } from '../../services/gemini';
 import { useCart } from '../../App';
 import { ModelViewerWrapper } from '../../components/ModelViewerWrapper';
 import { QRCodeModal } from '../../components/QRCodeModal';
+import { CURRENCY } from '../../constants';
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | undefined>();
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [aiDescription, setAiDescription] = useState<string>('');
-  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  
+  // View State
+  const [viewMode, setViewMode] = useState<'image' | '3d'>('image');
+  const [activeImage, setActiveImage] = useState<string>('');
+  
+  // Cart & Modal State
   const { addToCart } = useCart();
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [showToast, setShowToast] = useState(false);
   
   // Chat state
   const [chatQuestion, setChatQuestion] = useState('');
@@ -36,6 +43,8 @@ export const ProductDetail: React.FC = () => {
         setProduct(currentProduct);
 
         if (currentProduct) {
+            setActiveImage(currentProduct.imageUrl);
+            
             // Filter related products: Same category, exclude current
             const related = allProducts
                 .filter(p => p.category === currentProduct.category && p._id !== currentProduct._id)
@@ -53,7 +62,7 @@ export const ProductDetail: React.FC = () => {
         }
         
         // Reset state for new product
-        setAiDescription('');
+        setViewMode('image'); // Reset to image default
         setChatAnswer('');
         setChatQuestion('');
         setLoading(false);
@@ -61,14 +70,6 @@ export const ProductDetail: React.FC = () => {
     };
     loadData();
   }, [id]);
-
-  const handleGenerateDescription = async () => {
-    if (!product) return;
-    setIsGeneratingAi(true);
-    const desc = await generateProductDescription(product.name, `${product.category}, ${product.description}`);
-    setAiDescription(desc);
-    setIsGeneratingAi(false);
-  };
 
   const handleChatSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -80,24 +81,97 @@ export const ProductDetail: React.FC = () => {
       setIsChatting(false);
   }
 
+  const handleAddToCart = () => {
+      if (product) {
+          addToCart(product);
+          setShowToast(true);
+          setTimeout(() => setShowToast(false), 3000);
+      }
+  };
+
   if (loading || !product) {
     return <div className="min-h-screen flex items-center justify-center text-slate-500">Loading...</div>;
   }
 
+  // Handle multiple images
+  const galleryImages = product.images && product.images.length > 0 
+    ? product.images 
+    : [product.imageUrl];
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-        {/* Left Column: AR Viewer */}
-        <div className="h-[500px] lg:h-[600px] bg-slate-100 rounded-2xl shadow-inner relative">
-          <ModelViewerWrapper 
-            src={product.arModelUrl}
-            poster={product.imageUrl}
-            alt={`3D model of ${product.name}`}
-          />
-          <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500">
-            <Box className="w-4 h-4" />
-            <span>Rotate to view 360° • Tap AR button to view in room</span>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
+      {/* Toast Notification */}
+      {showToast && (
+          <div className="fixed top-24 right-4 z-50 animate-in slide-in-from-right duration-300">
+              <div className="bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3">
+                  <div className="bg-green-500/20 p-2 rounded-full">
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                  </div>
+                  <div>
+                      <h4 className="font-bold text-sm">Added to Cart</h4>
+                      <p className="text-slate-300 text-xs">{product.name}</p>
+                  </div>
+              </div>
           </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
+        {/* Left Column: Media Viewer */}
+        <div className="flex flex-col gap-4">
+            <div className="h-[500px] lg:h-[600px] bg-slate-100 rounded-2xl relative group overflow-hidden border border-slate-100">
+              
+              {viewMode === '3d' ? (
+                <div className="w-full h-full animate-in fade-in duration-500">
+                    <ModelViewerWrapper 
+                        src={product.arModelUrl}
+                        poster={activeImage}
+                        alt={`3D model of ${product.name}`}
+                    />
+                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-lg text-xs font-medium text-slate-600 pointer-events-none z-10">
+                        Interactive 3D
+                    </div>
+                </div>
+              ) : (
+                <div className="w-full h-full animate-in fade-in duration-500">
+                    <img 
+                        src={activeImage} 
+                        alt={product.name} 
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+              )}
+
+              {/* View Toggle Controller */}
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-white/90 backdrop-blur p-1.5 rounded-full shadow-lg border border-slate-200 flex gap-1">
+                  <button 
+                    onClick={() => setViewMode('image')}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all flex items-center gap-2 ${viewMode === 'image' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
+                  >
+                      <ImageIcon className="w-4 h-4" /> Image
+                  </button>
+                  <button 
+                    onClick={() => setViewMode('3d')}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all flex items-center gap-2 ${viewMode === '3d' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
+                  >
+                      <Box className="w-4 h-4" /> 3D View
+                  </button>
+              </div>
+            </div>
+
+            {/* Gallery Thumbnails */}
+            {galleryImages.length > 1 && (
+                <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
+                    {galleryImages.map((img, idx) => (
+                        <button 
+                            key={idx}
+                            onClick={() => { setActiveImage(img); setViewMode('image'); }}
+                            className={`w-20 h-20 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all ${activeImage === img && viewMode === 'image' ? 'border-indigo-600 ring-2 ring-indigo-600/20' : 'border-slate-200 hover:border-indigo-300'}`}
+                        >
+                            <img src={img} alt={`View ${idx + 1}`} className="w-full h-full object-cover" />
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>
 
         {/* Right Column: Details */}
@@ -105,25 +179,13 @@ export const ProductDetail: React.FC = () => {
           <div className="mb-auto">
             <span className="text-indigo-600 font-medium text-sm tracking-wider uppercase">{product.category}</span>
             <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mt-2 mb-2">{product.name}</h1>
-            <div className="text-4xl font-bold text-slate-900 mb-8">${product.price}</div>
+            <div className="text-4xl font-bold text-slate-900 mb-8">{CURRENCY}{product.price.toLocaleString()}</div>
 
             {/* Description Area */}
             <div className="prose prose-slate mb-8">
               <p className="text-lg text-slate-600 leading-relaxed">
-                {aiDescription || product.description}
+                {product.description}
               </p>
-              
-              {/* AI Generator Button */}
-              {!aiDescription && (
-                <button 
-                  onClick={handleGenerateDescription}
-                  disabled={isGeneratingAi}
-                  className="mt-3 inline-flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700 font-bold transition-colors"
-                >
-                  <Wand2 className={`w-4 h-4 ${isGeneratingAi ? 'animate-spin' : ''}`} />
-                  {isGeneratingAi ? 'Dreaming up description...' : 'Enhance with AI'}
-                </button>
-              )}
             </div>
 
             {/* Specs */}
@@ -151,7 +213,7 @@ export const ProductDetail: React.FC = () => {
                     <Wand2 className="w-4 h-4"/> Ask about this product
                 </h3>
                 {chatAnswer && (
-                    <div className="mb-4 p-3 bg-white rounded-lg text-sm text-slate-700 shadow-sm border border-indigo-50">
+                    <div className="mb-4 p-3 bg-white rounded-lg text-sm text-slate-700 shadow-sm border border-indigo-50 animate-in fade-in slide-in-from-bottom-2">
                         {chatAnswer}
                     </div>
                 )}
@@ -182,7 +244,7 @@ export const ProductDetail: React.FC = () => {
                     <div>
                         <h4 className="font-bold text-slate-900 text-sm mb-1">Shipping Costs</h4>
                         <p className="text-sm text-slate-500 leading-snug">
-                            Free standard shipping on all orders over $500. Expedited options available calculated at checkout.
+                            Free standard shipping on all orders over {CURRENCY}5,000. Expedited options available calculated at checkout.
                         </p>
                     </div>
                 </div>
@@ -216,14 +278,14 @@ export const ProductDetail: React.FC = () => {
           <div className="pt-6 border-t border-slate-200 mt-auto">
             <div className="flex flex-col sm:flex-row gap-4">
               <button 
-                onClick={() => addToCart(product)}
+                onClick={handleAddToCart}
                 className="flex-1 bg-slate-900 text-white px-6 py-4 rounded-xl font-bold text-lg hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg shadow-slate-900/20"
               >
                 <ShoppingCart className="w-5 h-5" />
                 Add to Cart
               </button>
 
-              {/* Mobile/Desktop AR Trigger */}
+              {/* QR Modal Trigger */}
               <button 
                 onClick={() => setIsQRModalOpen(true)}
                 className="flex-1 sm:flex-none sm:w-auto bg-white border-2 border-indigo-600 text-indigo-600 px-6 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
@@ -260,7 +322,7 @@ export const ProductDetail: React.FC = () => {
                     <p className="text-xs text-slate-500 mb-1">{rp.category}</p>
                     <h3 className="font-bold text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors line-clamp-1">{rp.name}</h3>
                     <div className="mt-auto pt-2">
-                        <p className="text-lg font-semibold text-slate-900">${rp.price}</p>
+                        <p className="text-lg font-semibold text-slate-900">{CURRENCY}{rp.price.toLocaleString()}</p>
                     </div>
                   </div>
                 </Link>

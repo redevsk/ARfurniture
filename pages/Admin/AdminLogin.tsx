@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Hexagon, ShieldCheck, ArrowRight, AlertCircle } from 'lucide-react';
@@ -38,7 +39,7 @@ export const AdminLogin: React.FC = () => {
         <div className="inline-flex items-center gap-2 p-3 bg-indigo-600 rounded-xl mb-4 shadow-lg shadow-indigo-600/20">
            <Hexagon className="w-8 h-8 text-white fill-current" />
         </div>
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">ARniture Admin</h1>
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">ARFurniture Admin</h1>
         <p className="text-slate-500">Secure Portal Access</p>
       </div>
 
@@ -63,7 +64,7 @@ export const AdminLogin: React.FC = () => {
               value={email}
               onChange={e => setEmail(e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
-              placeholder="admin@arniture.com"
+              placeholder="admin@arfurniture.com"
               required
             />
           </div>
@@ -92,13 +93,13 @@ export const AdminLogin: React.FC = () => {
         
         <div className="mt-6 pt-6 border-t border-slate-100 text-center">
              <p className="text-xs text-slate-400">
-                 Hint: Use <strong>admin@arniture.com</strong> / <strong>admin123</strong>
+                 Hint: Use <strong>admin@arfurniture.com</strong> / <strong>admin123</strong>
              </p>
         </div>
       </div>
       
       <p className="mt-8 text-slate-400 text-sm">
-          &copy; 2024 ARniture Inc. Internal System.
+          &copy; 2024 ARFurniture Inc. Internal System.
       </p>
     </div>
   );

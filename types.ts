@@ -13,6 +13,14 @@ export interface Dimensions {
   unit: 'cm' | 'in';
 }
 
+export interface Address {
+  street: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+}
+
 export interface Product {
   _id: string;
   name: string;
@@ -21,6 +29,7 @@ export interface Product {
   category: string;
   stock: number;
   imageUrl: string; // Thumbnail/2D image
+  images?: string[]; // Array of additional images
   arModelUrl: string; // .glb or .gltf URL
   dimensions: Dimensions;
   isFeatured?: boolean;
@@ -38,6 +47,7 @@ export interface Order {
   customerName: string;
   items: CartItem[];
   totalAmount: number;
+  shippingAddress?: Address;
   status: 'pending' | 'shipped' | 'delivered' | 'cancelled';
   createdAt: Date;
 }
@@ -59,4 +69,5 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  address?: Address;
 }

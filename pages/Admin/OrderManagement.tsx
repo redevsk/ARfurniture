@@ -1,7 +1,9 @@
+
 import React, { useEffect, useState } from 'react';
 import { Clock, Package, CheckCircle, XCircle, Search } from 'lucide-react';
 import { Order } from '../../types';
 import { db } from '../../services/db';
+import { CURRENCY } from '../../constants';
 
 export const OrderManagement: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -120,7 +122,7 @@ export const OrderManagement: React.FC = () => {
                             {order.items.map(i => i.name).join(', ')}
                         </div>
                     </td>
-                    <td className="px-6 py-4 text-sm font-bold text-slate-900">${order.totalAmount.toFixed(2)}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{CURRENCY}{order.totalAmount.toLocaleString()}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}>
                         {getStatusIcon(order.status)}

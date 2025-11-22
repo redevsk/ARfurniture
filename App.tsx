@@ -11,8 +11,8 @@ import { ProductManager } from './pages/Admin/ProductManager';
 import { OrderManagement } from './pages/Admin/OrderManagement';
 import { MarketingManager } from './pages/Admin/MarketingManager';
 import { AdminLogin } from './pages/Admin/AdminLogin';
-import { UserRole, CartItem, Product, User } from './types';
-import { loginUser, registerUser } from './services/auth';
+import { UserRole, CartItem, Product, User, Address } from './types';
+import { loginUser, registerUser, updateUserAddress } from './services/auth';
 
 // --- Context Definitions ---
 
@@ -21,6 +21,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<User>;
   signup: (name: string, email: string, pass: string) => Promise<User>;
   logout: () => void;
+  updateAddress: (address: Address) => Promise<void>;
   isAuthModalOpen: boolean;
   setAuthModalOpen: (isOpen: boolean) => void;
 }
@@ -76,6 +77,13 @@ const App: React.FC = () => {
     setCart([]); // Optional: clear cart on logout
   };
 
+  const handleUpdateAddress = async (address: Address) => {
+    if (user) {
+      await updateUserAddress(user._id, address);
+      setUser({ ...user, address });
+    }
+  };
+
   // Cart Handlers
   const addToCart = (product: Product) => {
     setCart(prev => {
@@ -101,6 +109,7 @@ const App: React.FC = () => {
       login: handleLogin, 
       signup: handleSignup, 
       logout: handleLogout,
+      updateAddress: handleUpdateAddress,
       isAuthModalOpen,
       setAuthModalOpen
     }}>

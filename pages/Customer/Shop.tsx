@@ -1,8 +1,122 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowRight, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { Product, MarketingBanner } from '../../types';
 import { db } from '../../services/db';
+import { CURRENCY } from '../../constants';
+
+const ProductCard: React.FC<{ product: Product }> = ({ product }) => (
+  <Link 
+    to={`/product/${product._id}`}
+    className="group block bg-white rounded-xl overflow-hidden border border-slate-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full flex flex-col"
+  >
+    <div className="aspect-square overflow-hidden bg-slate-100 relative">
+      <img 
+        src={product.imageUrl} 
+        alt={product.name}
+        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+      />
+      <div className="absolute top-2 left-2 flex flex-col gap-1">
+          {product.isNewArrival && (
+              <span className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">New</span>
+          )}
+          {product.isFeatured && (
+              <span className="bg-indigo-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">Featured</span>
+          )}
+      </div>
+      <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
+        <ArrowRight className="w-4 h-4 text-indigo-600" />
+      </div>
+    </div>
+    <div className="p-4 flex flex-col flex-grow">
+      <p className="text-xs text-slate-500 mb-1">{product.category}</p>
+      <h3 className="font-bold text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors line-clamp-1">{product.name}</h3>
+      <div className="mt-auto pt-2 flex items-center justify-between">
+          <p className="text-lg font-semibold text-slate-900">{CURRENCY}{product.price.toLocaleString()}</p>
+      </div>
+    </div>
+  </Link>
+);
+
+const BannerCarousel: React.FC<{ banners: MarketingBanner[] }> = ({ banners }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  if (!banners.length) return null;
+
+  const nextSlide = () => setCurrentIndex((prev) => (prev + 1) % banners.length);
+  const prevSlide = () => setCurrentIndex((prev) => (prev - 1 + banners.length) % banners.length);
+
+  return (
+      <div className="relative w-full h-[320px] bg-[#fdfbf7] rounded-none md:rounded-xl overflow-hidden mb-12 group border border-slate-100">
+            <div 
+              className="flex transition-transform duration-500 ease-in-out h-full" 
+              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+          >
+              {banners.map((banner) => (
+                  <div key={banner._id} className="min-w-full h-full flex flex-col md:flex-row relative">
+                      {banner.badgeText && (
+                          <div className="absolute top-0 left-0 z-10">
+                              <div className="bg-[#CD3C32] text-white text-xs font-bold px-8 py-1 shadow-md transform -rotate-45 -translate-x-8 translate-y-4 w-32 text-center">
+                                  {banner.badgeText}
+                              </div>
+                          </div>
+                      )}
+                      
+                      <div className="md:w-1/2 relative h-full order-2 md:order-1">
+                          <img src={banner.imageUrl} alt={banner.title} className="w-full h-full object-cover" />
+                      </div>
+                      
+                      <div className="md:w-1/2 p-6 md:p-10 flex flex-col justify-center items-start text-left bg-[#fdfbf7] order-1 md:order-2">
+                          {banner.subtitle && (
+                              <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 font-sans">
+                                  {banner.subtitle}
+                              </h4>
+                          )}
+                          <h2 className="text-2xl md:text-4xl font-serif font-medium text-slate-900 mb-3 leading-tight">
+                              {banner.title}
+                          </h2>
+                          <p className="text-slate-600 mb-6 text-sm md:text-base leading-relaxed max-w-md line-clamp-2">
+                              {banner.description}
+                          </p>
+                          <Link 
+                              to={banner.link}
+                              className="bg-slate-900 text-white px-6 py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors"
+                          >
+                              {banner.buttonText}
+                          </Link>
+                      </div>
+                  </div>
+              ))}
+          </div>
+
+          <button 
+              onClick={prevSlide}
+              className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 hover:bg-white text-slate-800 opacity-0 group-hover:opacity-100 transition-all shadow-lg z-20"
+          >
+              <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button 
+              onClick={nextSlide}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 hover:bg-white text-slate-800 opacity-0 group-hover:opacity-100 transition-all shadow-lg z-20"
+          >
+              <ChevronRight className="w-6 h-6" />
+          </button>
+
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+              {banners.map((_, idx) => (
+                  <button
+                      key={idx}
+                      onClick={() => setCurrentIndex(idx)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                          currentIndex === idx ? 'bg-slate-900 w-4' : 'bg-slate-300'
+                      }`}
+                  />
+              ))}
+          </div>
+      </div>
+  );
+};
 
 export const Shop: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -42,8 +156,8 @@ export const Shop: React.FC = () => {
     if (specialFilter === 'new') matchesSpecial = product.isNewArrival || false;
     if (specialFilter === 'featured') matchesSpecial = product.isFeatured || false;
     
-    // Mock Logic for Sale (if product price < 500 for example, or if we added a sale flag)
-    if (specialFilter === 'sale') matchesSpecial = product.price < 500;
+    // Mock Logic for Sale (e.g. price < 5000)
+    if (specialFilter === 'sale') matchesSpecial = product.price < 5000;
 
     return matchesSearch && matchesCategory && matchesSpecial;
   });
@@ -51,118 +165,6 @@ export const Shop: React.FC = () => {
   const newArrivals = products.filter(p => p.isNewArrival);
   const featuredProducts = products.filter(p => p.isFeatured);
   const isHomeView = !searchTerm && categoryFilter === 'All' && !specialFilter;
-
-  const ProductCard = ({ product }: { product: Product }) => (
-    <Link 
-      to={`/product/${product._id}`}
-      className="group block bg-white rounded-xl overflow-hidden border border-slate-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full flex flex-col"
-    >
-      <div className="aspect-square overflow-hidden bg-slate-100 relative">
-        <img 
-          src={product.imageUrl} 
-          alt={product.name}
-          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-        />
-        <div className="absolute top-2 left-2 flex flex-col gap-1">
-            {product.isNewArrival && (
-                <span className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">New</span>
-            )}
-            {product.isFeatured && (
-                <span className="bg-indigo-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">Featured</span>
-            )}
-        </div>
-        <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
-          <ArrowRight className="w-4 h-4 text-indigo-600" />
-        </div>
-      </div>
-      <div className="p-4 flex flex-col flex-grow">
-        <p className="text-xs text-slate-500 mb-1">{product.category}</p>
-        <h3 className="font-bold text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors line-clamp-1">{product.name}</h3>
-        <div className="mt-auto pt-2 flex items-center justify-between">
-            <p className="text-lg font-semibold text-slate-900">${product.price}</p>
-        </div>
-      </div>
-    </Link>
-  );
-
-  const BannerCarousel = ({ banners }: { banners: MarketingBanner[] }) => {
-    const [currentIndex, setCurrentIndex] = useState(0);
-
-    if (!banners.length) return null;
-
-    const nextSlide = () => setCurrentIndex((prev) => (prev + 1) % banners.length);
-    const prevSlide = () => setCurrentIndex((prev) => (prev - 1 + banners.length) % banners.length);
-
-    return (
-        <div className="relative w-full h-[320px] bg-[#fdfbf7] rounded-none md:rounded-xl overflow-hidden mb-12 group border border-slate-100">
-             <div 
-                className="flex transition-transform duration-500 ease-in-out h-full" 
-                style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-            >
-                {banners.map((banner) => (
-                    <div key={banner._id} className="min-w-full h-full flex flex-col md:flex-row relative">
-                        {banner.badgeText && (
-                            <div className="absolute top-0 left-0 z-10">
-                                <div className="bg-[#CD3C32] text-white text-xs font-bold px-8 py-1 shadow-md transform -rotate-45 -translate-x-8 translate-y-4 w-32 text-center">
-                                    {banner.badgeText}
-                                </div>
-                            </div>
-                        )}
-                        
-                        <div className="md:w-1/2 relative h-full order-2 md:order-1">
-                            <img src={banner.imageUrl} alt={banner.title} className="w-full h-full object-cover" />
-                        </div>
-                        
-                        <div className="md:w-1/2 p-6 md:p-10 flex flex-col justify-center items-start text-left bg-[#fdfbf7] order-1 md:order-2">
-                            {banner.subtitle && (
-                                <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2 font-sans">
-                                    {banner.subtitle}
-                                </h4>
-                            )}
-                            <h2 className="text-2xl md:text-4xl font-serif font-medium text-slate-900 mb-3 leading-tight">
-                                {banner.title}
-                            </h2>
-                            <p className="text-slate-600 mb-6 text-sm md:text-base leading-relaxed max-w-md line-clamp-2">
-                                {banner.description}
-                            </p>
-                            <Link 
-                                to={banner.link}
-                                className="bg-slate-900 text-white px-6 py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors"
-                            >
-                                {banner.buttonText}
-                            </Link>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            <button 
-                onClick={prevSlide}
-                className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 hover:bg-white text-slate-800 opacity-0 group-hover:opacity-100 transition-all shadow-lg z-20"
-            >
-                <ChevronLeft className="w-6 h-6" />
-            </button>
-            <button 
-                onClick={nextSlide}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 hover:bg-white text-slate-800 opacity-0 group-hover:opacity-100 transition-all shadow-lg z-20"
-            >
-                <ChevronRight className="w-6 h-6" />
-            </button>
-
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
-                {banners.map((_, idx) => (
-                    <button
-                        key={idx}
-                        onClick={() => setCurrentIndex(idx)}
-                        className={`w-2 h-2 rounded-full transition-all ${
-                            currentIndex === idx ? 'bg-slate-900 w-4' : 'bg-slate-300'
-                        }`}
-                    />
-                ))}
-            </div>
-        </div>
-    );
-  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

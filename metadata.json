@@ -1,5 +1,5 @@
 {
-  "name": "ARniture",
+  "name": "ARFurniture",
   "description": "A modern furniture e-commerce platform featuring Augmented Reality previews, AI-powered descriptions, and a comprehensive admin dashboard.",
   "requestFramePermissions": [
     "camera",

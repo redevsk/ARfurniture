@@ -1,12 +1,12 @@
 
 import { Box, ShoppingBag, LayoutDashboard, LogOut, User, ClipboardList, Megaphone } from 'lucide-react';
 
-export const APP_NAME = "ARniture";
-export const CURRENCY = "$";
+export const APP_NAME = "ARFurniture";
+export const CURRENCY = "₱";
 
 export const NAV_ITEMS_CUSTOMER = [
   { label: 'Shop', path: '/', icon: ShoppingBag },
-  { label: 'About', path: '/about', icon: User }, // Placeholder
+  { label: 'About', path: '/about', icon: User },
 ];
 
 export const NAV_ITEMS_ADMIN = [

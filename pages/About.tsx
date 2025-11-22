@@ -10,17 +10,16 @@ export const About: React.FC = () => {
       <div className="relative bg-slate-900 py-24 px-4 sm:px-6 lg:px-8 text-center">
         <div className="absolute inset-0 overflow-hidden">
            <img 
-             src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1920&q=80" 
-             alt="Office background" 
+             src="https://images.unsplash.com/photo-1590325121639-509e6c469b61?auto=format&fit=crop&w=1920&q=80" 
              className="w-full h-full object-cover opacity-20"
            />
         </div>
         <div className="relative z-10 max-w-3xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-serif font-bold text-white mb-6">
-            Redefining Space with AR Technology
+            Proudly Made in Valenzuela
           </h1>
           <p className="text-xl text-slate-300 mb-8 font-light">
-            Experience furniture like never before. Visualize, customize, and decide with confidence.
+            Bringing sustainable Palochina wood furniture from our workshop to your home with AR technology.
           </p>
         </div>
       </div>
@@ -31,8 +30,11 @@ export const About: React.FC = () => {
            <div>
               <h2 className="text-3xl font-bold text-slate-900 mb-6 font-serif">Who We Are</h2>
               <p className="text-lg text-slate-600 mb-6 leading-relaxed">
-                ARniture is a pioneering e-commerce platform bridging the gap between digital shopping and physical reality. 
-                We believe that buying furniture shouldn't be a guessing game. By combining high-quality craftsmanship with cutting-edge Augmented Reality, we bring the showroom to your living room.
+                ARFurniture is a homegrown e-commerce platform rooted in Valenzuela City, the industrial gateway of Metro Manila. 
+                We specialize in crafting high-quality furniture from <strong>Palochina wood</strong>—upcycled, sustainable, and durable pine wood that brings a rustic charm to any space.
+              </p>
+              <p className="text-lg text-slate-600 mb-6 leading-relaxed">
+                We combine traditional Filipino craftsmanship with modern Augmented Reality (AR) technology, allowing you to visualize our locally made pieces in your home before you buy.
               </p>
               
               <div className="space-y-6">
@@ -41,8 +43,8 @@ export const About: React.FC = () => {
                           <MapPin className="w-5 h-5" />
                       </div>
                       <div>
-                          <h3 className="font-bold text-slate-900 text-lg">Location</h3>
-                          <p className="text-slate-600">123 Innovation Drive, Suite 400<br/>San Francisco, CA 94105</p>
+                          <h3 className="font-bold text-slate-900 text-lg">Workshop Location</h3>
+                          <p className="text-slate-600">123 Gen. T. de Leon Street<br/>Valenzuela City, Metro Manila 1442</p>
                       </div>
                   </div>
 
@@ -51,13 +53,13 @@ export const About: React.FC = () => {
                           <Briefcase className="w-5 h-5" />
                       </div>
                       <div>
-                          <h3 className="font-bold text-slate-900 text-lg">What We Offer</h3>
+                          <h3 className="font-bold text-slate-900 text-lg">Our Specialty</h3>
                           <p className="text-slate-600">
-                            A curated selection of premium modern furniture featuring:
+                            Custom Palochina and industrial-style furniture:
                             <ul className="list-disc list-inside mt-1 text-sm">
-                                <li>Instant AR visualization in your own space</li>
-                                <li>AI-powered interior design assistance</li>
-                                <li>White-glove delivery service</li>
+                                <li>Bed frames, dining sets, and multi-purpose racks</li>
+                                <li>Eco-friendly upcycled wood materials</li>
+                                <li>Affordable local pricing</li>
                             </ul>
                           </p>
                       </div>
@@ -68,9 +70,9 @@ export const About: React.FC = () => {
                           <Clock className="w-5 h-5" />
                       </div>
                       <div>
-                          <h3 className="font-bold text-slate-900 text-lg">Experience</h3>
+                          <h3 className="font-bold text-slate-900 text-lg">Established 2020</h3>
                           <p className="text-slate-600">
-                             Founded in 2020, we have over 4 years of dedicated experience revolutionizing the way people shop for their homes, serving over 10,000 happy customers.
+                             Starting as a small backyard workshop during the pandemic, we have grown to serve thousands of Filipino homes with sturdy, stylish, and sustainable furniture.
                           </p>
                       </div>
                   </div>
@@ -79,13 +81,13 @@ export const About: React.FC = () => {
            
            <div className="relative h-[500px] rounded-2xl overflow-hidden shadow-2xl bg-slate-100">
               <img 
-                src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80"
-                alt="Showroom"
+                src="https://images.unsplash.com/photo-1533090481720-856c6e3c1fdc?auto=format&fit=crop&w=800&q=80"
+                alt="Palochina Furniture"
                 className="w-full h-full object-cover"
               />
               <div className="absolute bottom-6 left-6 bg-white/90 backdrop-blur-sm p-4 rounded-xl max-w-xs">
-                  <p className="text-sm font-bold text-slate-900">"The future of furniture shopping is here."</p>
-                  <p className="text-xs text-slate-500 mt-1">- Interior Design Weekly</p>
+                  <p className="text-sm font-bold text-slate-900">"Matibay, Maganda, at Mura."</p>
+                  <p className="text-xs text-slate-500 mt-1">- Tatak Valenzuela</p>
               </div>
            </div>
         </div>
@@ -94,39 +96,39 @@ export const About: React.FC = () => {
         <div className="py-8 border-t border-slate-100">
             <div className="flex justify-between items-end mb-8 mt-8">
                 <div>
-                    <h2 className="text-3xl font-bold text-slate-900 font-serif">Sample Portfolio</h2>
-                    <p className="text-slate-500 mt-2">Real homes transformed with ARniture pieces.</p>
+                    <h2 className="text-3xl font-bold text-slate-900 font-serif">Our Palochina Collection</h2>
+                    <p className="text-slate-500 mt-2">Real Pinoy homes transformed with ARFurniture pieces.</p>
                 </div>
                 <Link to="/" className="text-indigo-600 font-bold hover:underline flex items-center gap-2">
-                    Explore Collection <ArrowRight className="w-4 h-4" />
+                    Explore Shop <ArrowRight className="w-4 h-4" />
                 </Link>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div className="group relative overflow-hidden rounded-xl aspect-[4/3] cursor-pointer">
-                    <img src="https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=800&q=80" alt="Modern Living" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <img src="https://images.unsplash.com/photo-1505693416388-b0346efee958?auto=format&fit=crop&w=800&q=80" alt="Palochina Bed" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-6">
                         <div>
-                            <p className="text-white font-bold text-lg">Modern Living Room</p>
-                            <p className="text-white/80 text-sm">Featured: Eames Lounge Chair</p>
+                            <p className="text-white font-bold text-lg">Rustic Bed Frame</p>
+                            <p className="text-white/80 text-sm">Solid Palochina</p>
                         </div>
                     </div>
                 </div>
                 <div className="group relative overflow-hidden rounded-xl aspect-[4/3] cursor-pointer">
-                    <img src="https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80" alt="Scandinavian Style" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <img src="https://images.unsplash.com/photo-1595428774223-ef52624120d2?auto=format&fit=crop&w=800&q=80" alt="Plant Rack" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-6">
                         <div>
-                            <p className="text-white font-bold text-lg">Scandinavian Office</p>
-                            <p className="text-white/80 text-sm">Featured: Minimalist Desk</p>
+                            <p className="text-white font-bold text-lg">Multi-Purpose Rack</p>
+                            <p className="text-white/80 text-sm">Varnished Finish</p>
                         </div>
                     </div>
                 </div>
                 <div className="group relative overflow-hidden rounded-xl aspect-[4/3] cursor-pointer">
-                    <img src="https://images.unsplash.com/photo-1505693416388-b0346efee958?auto=format&fit=crop&w=800&q=80" alt="Industrial Loft" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <img src="https://images.unsplash.com/photo-1604578762246-41134e37f9cc?auto=format&fit=crop&w=800&q=80" alt="Dining Set" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-6">
                         <div>
-                            <p className="text-white font-bold text-lg">Industrial Loft</p>
-                            <p className="text-white/80 text-sm">Featured: Metal Coffee Table</p>
+                            <p className="text-white font-bold text-lg">Dining Set</p>
+                            <p className="text-white/80 text-sm">4-Seater Custom</p>
                         </div>
                     </div>
                 </div>

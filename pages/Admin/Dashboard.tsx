@@ -1,15 +1,17 @@
+
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Users, DollarSign, Package } from 'lucide-react';
+import { CURRENCY } from '../../constants';
 
 const data = [
-  { name: 'Mon', sales: 4000 },
-  { name: 'Tue', sales: 3000 },
-  { name: 'Wed', sales: 2000 },
-  { name: 'Thu', sales: 2780 },
-  { name: 'Fri', sales: 1890 },
-  { name: 'Sat', sales: 2390 },
-  { name: 'Sun', sales: 3490 },
+  { name: 'Mon', sales: 40000 },
+  { name: 'Tue', sales: 30000 },
+  { name: 'Wed', sales: 20000 },
+  { name: 'Thu', sales: 27800 },
+  { name: 'Fri', sales: 18900 },
+  { name: 'Sat', sales: 23900 },
+  { name: 'Sun', sales: 34900 },
 ];
 
 const StatCard = ({ icon: Icon, title, value, change }: any) => (
@@ -37,7 +39,7 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard icon={DollarSign} title="Total Revenue" value="$45,231.89" change="+20.1%" />
+        <StatCard icon={DollarSign} title="Total Revenue" value={`${CURRENCY}245,231`} change="+20.1%" />
         <StatCard icon={Users} title="Active Customers" value="2,345" change="+15.2%" />
         <StatCard icon={Package} title="Products Sold" value="1,234" change="+5.4%" />
         <StatCard icon={TrendingUp} title="Conversion Rate" value="3.2%" change="-1.1%" />
@@ -52,10 +54,11 @@ export const AdminDashboard: React.FC = () => {
               <BarChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="name" stroke="#64748b" fontSize={12} />
-                <YAxis stroke="#64748b" fontSize={12} tickFormatter={(value) => `$${value}`} />
+                <YAxis stroke="#64748b" fontSize={12} tickFormatter={(value) => `${CURRENCY}${value/1000}k`} />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
                   itemStyle={{ color: '#fff' }}
+                  formatter={(value: any) => [`${CURRENCY}${value.toLocaleString()}`, "Sales"]}
                 />
                 <Bar dataKey="sales" fill="#4f46e5" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -75,7 +78,7 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-sm font-medium text-slate-900">Customer {i}</div>
-                    <div className="text-xs text-slate-500">2 items • $340.00</div>
+                    <div className="text-xs text-slate-500">2 items • {CURRENCY}8,500</div>
                   </div>
                 </div>
                 <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
