@@ -248,6 +248,18 @@ class MockDatabase {
     });
   }
 
+  async updateBanner(id: string, updates: Partial<MarketingBanner>): Promise<MarketingBanner> {
+    return new Promise((resolve, reject) => {
+        const index = this.banners.findIndex(b => b._id === id);
+        if (index !== -1) {
+            this.banners[index] = { ...this.banners[index], ...updates };
+            resolve(this.banners[index]);
+        } else {
+            reject(new Error("Banner not found"));
+        }
+    });
+  }
+
   async deleteBanner(id: string): Promise<void> {
       return new Promise((resolve) => {
           this.banners = this.banners.filter(b => b._id !== id);

@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Plus, Trash2, X, Save, Upload, Megaphone, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, X, Save, Upload, Megaphone, AlertCircle, Edit2 } from 'lucide-react';
 import { MarketingBanner } from '../../types';
 import { db } from '../../services/db';
 
@@ -10,6 +10,7 @@ export const MarketingManager: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -43,6 +44,36 @@ export const MarketingManager: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleOpenCreate = () => {
+      setFormData({
+            title: '',
+            subtitle: '',
+            description: '',
+            imageUrl: '',
+            badgeText: '',
+            buttonText: 'SHOP NOW',
+            link: '/',
+            isActive: true
+      });
+      setEditingId(null);
+      setIsModalOpen(true);
+  }
+
+  const handleEdit = (banner: MarketingBanner) => {
+      setFormData({
+          title: banner.title,
+          subtitle: banner.subtitle || '',
+          description: banner.description,
+          imageUrl: banner.imageUrl,
+          badgeText: banner.badgeText || '',
+          buttonText: banner.buttonText,
+          link: banner.link,
+          isActive: banner.isActive
+      });
+      setEditingId(banner._id);
+      setIsModalOpen(true);
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -53,8 +84,16 @@ export const MarketingManager: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-        const newBanner = await db.createBanner(formData);
-        setBanners(prev => [...prev, newBanner]);
+        if (editingId) {
+            // Update existing
+            const updatedBanner = await db.updateBanner(editingId, formData);
+            setBanners(prev => prev.map(b => b._id === editingId ? updatedBanner : b));
+        } else {
+            // Create new
+            const newBanner = await db.createBanner(formData);
+            setBanners(prev => [...prev, newBanner]);
+        }
+        
         setIsModalOpen(false);
         setFormData({
             title: '',
@@ -66,6 +105,7 @@ export const MarketingManager: React.FC = () => {
             link: '/',
             isActive: true
         });
+        setEditingId(null);
     } catch (e) {
         setFormError("Failed to save banner");
     } finally {
@@ -81,7 +121,7 @@ export const MarketingManager: React.FC = () => {
             <p className="text-slate-500 text-sm">Manage homepage promotional sections</p>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleOpenCreate}
           className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-600/20"
         >
           <Plus className="w-4 h-4" /> Create Banner
@@ -101,12 +141,20 @@ export const MarketingManager: React.FC = () => {
                          </div>
                     )}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                    <button 
-                        onClick={() => handleDelete(banner._id)}
-                        className="absolute top-2 right-2 bg-white/90 p-2 rounded-lg text-red-600 opacity-0 group-hover:opacity-100 transition-all hover:bg-white"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                        <button 
+                            onClick={() => handleEdit(banner)}
+                            className="bg-white/90 p-2 rounded-lg text-indigo-600 hover:bg-white shadow-sm"
+                        >
+                            <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                            onClick={() => handleDelete(banner._id)}
+                            className="bg-white/90 p-2 rounded-lg text-red-600 hover:bg-white shadow-sm"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
                 <div className="p-6">
                     {banner.subtitle && <div className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">{banner.subtitle}</div>}
@@ -120,12 +168,14 @@ export const MarketingManager: React.FC = () => {
         ))}
       </div>
       
-      {/* Create Banner Modal */}
+      {/* Create/Edit Banner Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
                  <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                    <h2 className="text-lg font-bold text-slate-900">Create Marketing Banner</h2>
+                    <h2 className="text-lg font-bold text-slate-900">
+                        {editingId ? 'Edit Marketing Banner' : 'Create Marketing Banner'}
+                    </h2>
                     <button onClick={() => setIsModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200 transition-colors">
                         <X className="w-5 h-5" />
                     </button>
@@ -172,7 +222,7 @@ export const MarketingManager: React.FC = () => {
                 <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
                      <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg">Cancel</button>
                      <button type="submit" form="bannerForm" disabled={isSubmitting} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-                         {isSubmitting ? 'Saving...' : 'Create Banner'}
+                         {isSubmitting ? 'Saving...' : (editingId ? 'Update Banner' : 'Create Banner')}
                      </button>
                 </div>
             </div>
