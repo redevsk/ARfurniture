@@ -46,8 +46,8 @@ export interface Order {
   _id: string;
   userId: string;
   customerName: string;
-  recipientName: string;
-  contactNumber: string;
+  recipientName: string;     // Added
+  contactNumber: string;     // Added
   items: CartItem[];
   totalAmount: number;
   shippingAddress?: Address;

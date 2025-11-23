@@ -11,6 +11,7 @@ export const ProductManager: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -45,6 +46,46 @@ export const ProductManager: React.FC = () => {
     }
   };
 
+  const handleEdit = (product: Product) => {
+    setEditingId(product._id);
+    setFormData({
+      name: product.name,
+      description: product.description,
+      price: product.price.toString(),
+      stock: product.stock.toString(),
+      category: product.category,
+      imageUrl: product.imageUrl,
+      arModelUrl: product.arModelUrl,
+      width: product.dimensions.width.toString(),
+      height: product.dimensions.height.toString(),
+      depth: product.dimensions.depth.toString(),
+      unit: product.dimensions.unit,
+      isFeatured: product.isFeatured || false,
+      isNewArrival: product.isNewArrival || false
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleCreate = () => {
+    setEditingId(null);
+    setFormData({
+        name: '',
+        description: '',
+        price: '',
+        stock: '',
+        category: 'Chairs',
+        imageUrl: '',
+        arModelUrl: '',
+        width: '',
+        height: '',
+        depth: '',
+        unit: 'cm',
+        isFeatured: false,
+        isNewArrival: false
+    });
+    setIsModalOpen(true);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
@@ -76,7 +117,7 @@ export const ProductManager: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-        const newProduct = {
+        const productData = {
             name: formData.name,
             description: formData.description,
             price: parseFloat(formData.price) || 0,
@@ -94,9 +135,18 @@ export const ProductManager: React.FC = () => {
             isNewArrival: formData.isNewArrival
         };
         
-        const created = await db.createProduct(newProduct);
-        setProducts(prev => [...prev, created]);
+        if (editingId) {
+            // Update
+            const updated = await db.updateProduct(editingId, productData);
+            setProducts(prev => prev.map(p => p._id === editingId ? updated : p));
+        } else {
+            // Create
+            const created = await db.createProduct(productData);
+            setProducts(prev => [...prev, created]);
+        }
+        
         setIsModalOpen(false);
+        setEditingId(null);
         
         // Reset form
         setFormData({
@@ -130,7 +180,7 @@ export const ProductManager: React.FC = () => {
             <p className="text-slate-500 text-sm">Manage inventory and AR assets</p>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleCreate}
           className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-600/20"
         >
           <Plus className="w-4 h-4" /> Add Product
@@ -184,7 +234,10 @@ export const ProductManager: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                        <button 
+                            onClick={() => handleEdit(product)}
+                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button 
@@ -206,13 +259,13 @@ export const ProductManager: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Product Modal */}
+      {/* Add/Edit Product Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
                 {/* Modal Header */}
                 <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                    <h2 className="text-lg font-bold text-slate-900">Add New Product</h2>
+                    <h2 className="text-lg font-bold text-slate-900">{editingId ? 'Edit Product' : 'Add New Product'}</h2>
                     <button onClick={() => setIsModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200 transition-colors">
                         <X className="w-5 h-5" />
                     </button>
@@ -341,7 +394,7 @@ export const ProductManager: React.FC = () => {
                             <>Saving...</>
                         ) : (
                             <>
-                                <Save className="w-4 h-4" /> Save Product
+                                <Save className="w-4 h-4" /> {editingId ? 'Update Product' : 'Save Product'}
                             </>
                         )}
                     </button>

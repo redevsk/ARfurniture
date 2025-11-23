@@ -30,6 +30,7 @@ const INITIAL_PRODUCTS: Product[] = [
       'https://images.unsplash.com/photo-1550226891-ef816aed4a98?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=800&q=80'
     ],
+    // UPDATED: Dummy AR from web (Astronaut)
     arModelUrl: 'https://modelviewer.dev/shared-assets/models/Astronaut.glb', 
     dimensions: { width: 200, height: 80, depth: 90, unit: 'cm' },
     isFeatured: true,
@@ -203,6 +204,18 @@ class MockDatabase {
       };
       this.products.push(newProduct);
       resolve(newProduct);
+    });
+  }
+
+  async updateProduct(id: string, updates: Partial<Product>): Promise<Product> {
+    return new Promise((resolve, reject) => {
+        const index = this.products.findIndex(p => p._id === id);
+        if (index !== -1) {
+            this.products[index] = { ...this.products[index], ...updates };
+            resolve(this.products[index]);
+        } else {
+            reject(new Error("Product not found"));
+        }
     });
   }
 
