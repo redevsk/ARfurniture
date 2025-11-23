@@ -179,9 +179,7 @@ export const ProductDetail: React.FC = () => {
           <div className="mb-auto">
             <span className="text-indigo-600 font-medium text-sm tracking-wider uppercase">{product.category}</span>
             <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mt-2 mb-2">{product.name}</h1>
-            <div className="text-4xl font-bold text-slate-900 mb-6">{CURRENCY}{product.price.toLocaleString()}</div>
-
-            
+            <div className="text-4xl font-bold text-slate-900 mb-8">{CURRENCY}{product.price.toLocaleString()}</div>
 
             {/* Description Area */}
             <div className="prose prose-slate mb-8">
@@ -237,25 +235,6 @@ export const ProductDetail: React.FC = () => {
                 </form>
              </div>
 
-             <div className="mb-8">
-               <div className="flex flex-col sm:flex-row gap-4">
-                 <button 
-                   onClick={handleAddToCart}
-                   className="flex-1 bg-slate-900 text-white px-6 py-4 rounded-xl font-bold text-lg hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg shadow-slate-900/20"
-                 >
-                   <ShoppingCart className="w-5 h-5" />
-                   Add to Cart
-                 </button>
-                 <button 
-                   onClick={() => setIsQRModalOpen(true)}
-                   className="flex-1 sm:flex-none sm:w-auto bg-white border-2 border-indigo-600 text-indigo-600 px-6 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
-                 >
-                   <Smartphone className="w-5 h-5" />
-                   <span className="hidden sm:inline">Scan for </span>AR
-                 </button>
-               </div>
-             </div>
-
              {/* Policies Section */}
              <div className="border-t border-slate-200 pt-6 space-y-5 mb-8">
                 <div className="flex items-start gap-4">
@@ -295,39 +274,59 @@ export const ProductDetail: React.FC = () => {
 
           </div>
 
-          
+          {/* Actions */}
+          <div className="pt-6 border-t border-slate-200 mt-auto">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button 
+                onClick={handleAddToCart}
+                className="flex-1 bg-slate-900 text-white px-6 py-4 rounded-xl font-bold text-lg hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg shadow-slate-900/20"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                Add to Cart
+              </button>
+
+              {/* QR Modal Trigger */}
+              <button 
+                onClick={() => setIsQRModalOpen(true)}
+                className="flex-1 sm:flex-none sm:w-auto bg-white border-2 border-indigo-600 text-indigo-600 px-6 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
+              >
+                <Smartphone className="w-5 h-5" />
+                <span className="hidden sm:inline">Scan for </span>AR
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       
       {/* You May Also Like Section */}
       <div className="border-t border-slate-200 pt-12 pb-12">
         <h2 className="text-2xl font-bold text-slate-900 font-serif mb-8">You may also like</h2>
-        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-2">
-          {relatedProducts.map((rp) => (
-            <Link
-              key={rp._id}
-              to={`/product/${rp._id}`}
-              className="group block bg-white rounded-xl overflow-hidden border border-slate-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full flex flex-col flex-shrink-0 w-72 md:w-auto snap-start"
-            >
-              <div className="aspect-square overflow-hidden bg-slate-100 relative">
-                <img
-                  src={rp.imageUrl}
-                  alt={rp.name}
-                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                />
-                {rp.isNewArrival && (
-                  <span className="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">New</span>
-                )}
-              </div>
-              <div className="p-4 flex flex-col flex-grow">
-                <p className="text-xs text-slate-500 mb-1">{rp.category}</p>
-                <h3 className="font-bold text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors line-clamp-1">{rp.name}</h3>
-                <div className="mt-auto pt-2">
-                  <p className="text-lg font-semibold text-slate-900">{CURRENCY}{rp.price.toLocaleString()}</p>
-                </div>
-              </div>
-            </Link>
-          ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {relatedProducts.map((rp) => (
+                <Link 
+                  key={rp._id}
+                  to={`/product/${rp._id}`}
+                  className="group block bg-white rounded-xl overflow-hidden border border-slate-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full flex flex-col"
+                >
+                  <div className="aspect-square overflow-hidden bg-slate-100 relative">
+                    <img 
+                      src={rp.imageUrl} 
+                      alt={rp.name}
+                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                    />
+                    {rp.isNewArrival && (
+                        <span className="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">New</span>
+                    )}
+                  </div>
+                  <div className="p-4 flex flex-col flex-grow">
+                    <p className="text-xs text-slate-500 mb-1">{rp.category}</p>
+                    <h3 className="font-bold text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors line-clamp-1">{rp.name}</h3>
+                    <div className="mt-auto pt-2">
+                        <p className="text-lg font-semibold text-slate-900">{CURRENCY}{rp.price.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </Link>
+            ))}
         </div>
       </div>
 

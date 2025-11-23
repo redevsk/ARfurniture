@@ -8,12 +8,7 @@ export const About: React.FC = () => {
     <div className="bg-white min-h-screen">
       {/* Hero Section */}
       <div className="relative bg-slate-900 py-24 px-4 sm:px-6 lg:px-8 text-center">
-        <div className="absolute inset-0 overflow-hidden">
-           <img 
-             src="https://images.unsplash.com/photo-1590325121639-509e6c469b61?auto=format&fit=crop&w=1920&q=80" 
-             className="w-full h-full object-cover opacity-20"
-           />
-        </div>
+        {/* Image removed as requested */}
         <div className="relative z-10 max-w-3xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-serif font-bold text-white mb-6">
             Proudly Made in Valenzuela
@@ -138,3 +133,4 @@ export const About: React.FC = () => {
     </div>
   );
 };
+    
