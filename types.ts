@@ -19,6 +19,7 @@ export interface Address {
   state: string;
   zipCode: string;
   country: string;
+  landmark?: string;
 }
 
 export interface Product {
@@ -45,6 +46,8 @@ export interface Order {
   _id: string;
   userId: string;
   customerName: string;
+  recipientName: string;
+  contactNumber: string;
   items: CartItem[];
   totalAmount: number;
   shippingAddress?: Address;

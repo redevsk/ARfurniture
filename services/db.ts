@@ -121,6 +121,8 @@ const INITIAL_ORDERS: Order[] = [
     _id: 'ord-2839',
     userId: 'usr-101',
     customerName: 'Maria Santos',
+    recipientName: 'Maria Santos',
+    contactNumber: '0917-123-4567',
     items: [{ ...INITIAL_PRODUCTS[0], quantity: 1 }],
     totalAmount: 18500,
     shippingAddress: {
@@ -128,7 +130,8 @@ const INITIAL_ORDERS: Order[] = [
         city: 'Valenzuela City',
         state: 'Metro Manila',
         zipCode: '1442',
-        country: 'Philippines'
+        country: 'Philippines',
+        landmark: 'Near Barangay Hall'
     },
     status: 'pending',
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2), 
@@ -137,6 +140,8 @@ const INITIAL_ORDERS: Order[] = [
     _id: 'ord-2838',
     userId: 'usr-102',
     customerName: 'Juan Dela Cruz',
+    recipientName: 'Juan Dela Cruz',
+    contactNumber: '0918-987-6543',
     items: [{ ...INITIAL_PRODUCTS[4], quantity: 2 }, { ...INITIAL_PRODUCTS[2], quantity: 1 }],
     totalAmount: 10900,
     shippingAddress: {
@@ -144,7 +149,8 @@ const INITIAL_ORDERS: Order[] = [
         city: 'Valenzuela City',
         state: 'Metro Manila',
         zipCode: '1440',
-        country: 'Philippines'
+        country: 'Philippines',
+        landmark: 'Beside Shell Station'
     },
     status: 'shipped',
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24), 
@@ -153,6 +159,8 @@ const INITIAL_ORDERS: Order[] = [
     _id: 'ord-2837',
     userId: 'usr-103',
     customerName: 'Grace Reyes',
+    recipientName: 'Lola Remedios',
+    contactNumber: '0920-555-4444',
     items: [{ ...INITIAL_PRODUCTS[1], quantity: 1 }],
     totalAmount: 24999,
     shippingAddress: {
@@ -160,7 +168,8 @@ const INITIAL_ORDERS: Order[] = [
         city: 'Valenzuela City',
         state: 'Metro Manila',
         zipCode: '1441',
-        country: 'Philippines'
+        country: 'Philippines',
+        landmark: 'Front of SM Valenzuela'
     },
     status: 'delivered',
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48), 
@@ -209,7 +218,7 @@ class MockDatabase {
     return new Promise((resolve) => {
       const newOrder: Order = {
         ...order,
-        _id: Math.random().toString(36).substring(7),
+        _id: 'ord-' + Math.random().toString(36).substring(7).substr(0,4),
         status: 'pending',
         createdAt: new Date(),
       };
