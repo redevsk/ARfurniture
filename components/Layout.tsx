@@ -41,8 +41,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { label: 'Sofas', action: () => handleCategoryClick('Sofas') },
     { label: 'Tables', action: () => handleCategoryClick('Tables') },
     { label: 'Decor', action: () => handleCategoryClick('Decor') },
-    { label: 'About', action: () => navigate('/about') },
     { label: 'Sale', action: () => navigate('/?filter=sale') },
+    { label: 'About Us', action: () => navigate('/about') },
   ];
 
   return (

@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Trash2, ArrowRight, CreditCard, MapPin, Plus, Check, X, Phone, User, Home, CheckCircle } from 'lucide-react';
-import { useCart, useAuth } from '../App';
-import { Address } from '../types';
-import { CURRENCY } from '../constants';
-import { db } from '../services/db';
+import { useCart, useAuth } from '../../App';
+import { Address } from '../../types';
+import { CURRENCY } from '../../constants';
+import { db } from '../../services/db';
 
 interface CheckoutForm {
     recipientName: string;
@@ -38,14 +37,12 @@ export const Cart: React.FC = () => {
     country: ''
   });
 
-  // Automatically select all items when cart changes
   useEffect(() => {
     if (selectedItems.size === 0 && cart.length > 0) {
         setSelectedItems(new Set(cart.map(item => item._id)));
     }
   }, [cart.length]);
 
-  // Pre-fill form when user logs in or modal opens
   useEffect(() => {
       if (user) {
           setCheckoutForm(prev => ({
@@ -82,7 +79,7 @@ export const Cart: React.FC = () => {
 
   const cartItemsToCheckout = cart.filter(item => selectedItems.has(item._id));
   const subtotal = cartItemsToCheckout.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const tax = subtotal * 0.12; // VAT 12% in PH
+  const tax = subtotal * 0.12;
   const total = subtotal + tax;
 
   const handleCheckoutClick = () => {
@@ -100,9 +97,7 @@ export const Cart: React.FC = () => {
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    
     setIsSubmitting(true);
-    
     try {
         await db.createOrder({
             userId: user._id,
@@ -120,8 +115,6 @@ export const Cart: React.FC = () => {
                 landmark: checkoutForm.landmark
             }
         });
-        
-        // Remove checked items
         cartItemsToCheckout.forEach(item => removeFromCart(item._id));
         setSelectedItems(new Set());
         setOrderSuccess(true);
@@ -129,7 +122,6 @@ export const Cart: React.FC = () => {
             setOrderSuccess(false);
             setIsCheckoutModalOpen(false);
         }, 3000);
-        
     } catch (error) {
         alert("Failed to place order. Please try again.");
     } finally {
@@ -157,9 +149,7 @@ export const Cart: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
       <h1 className="text-3xl font-bold text-slate-900 mb-8">Shopping Cart</h1>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-        {/* Cart Items */}
         <div className="lg:col-span-2">
             <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-200">
                 <input 
@@ -170,7 +160,6 @@ export const Cart: React.FC = () => {
                 />
                 <span className="text-sm font-semibold text-slate-700">Select All ({cart.length} items)</span>
             </div>
-
             <div className="space-y-6">
             {cart.map((item) => (
                 <div key={item._id} className={`flex gap-4 p-4 border rounded-xl shadow-sm transition-colors ${selectedItems.has(item._id) ? 'bg-white border-indigo-100 ring-1 ring-indigo-500/20' : 'bg-slate-50 border-slate-100 opacity-70'}`}>
@@ -209,14 +198,10 @@ export const Cart: React.FC = () => {
             ))}
             </div>
         </div>
-
-        {/* Summary */}
         <div className="lg:col-span-1">
           <div className="bg-slate-50 p-6 rounded-2xl sticky top-24 border border-slate-200">
-            
             <h3 className="text-lg font-bold text-slate-900 mb-6">Order Summary</h3>
             <p className="text-xs text-slate-500 mb-4">Summary for {cartItemsToCheckout.length} selected items</p>
-            
             <div className="space-y-3 mb-6">
               <div className="flex justify-between text-slate-600">
                 <span>Subtotal</span>
@@ -235,7 +220,6 @@ export const Cart: React.FC = () => {
                 <span>{CURRENCY}{total.toLocaleString()}</span>
               </div>
             </div>
-
             <button 
               onClick={handleCheckoutClick}
               disabled={cartItemsToCheckout.length === 0}
@@ -247,7 +231,6 @@ export const Cart: React.FC = () => {
         </div>
       </div>
 
-      {/* Checkout Modal */}
       {isCheckoutModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200 my-8">
@@ -269,10 +252,8 @@ export const Cart: React.FC = () => {
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        
                         <div className="p-6">
                             <form id="checkoutForm" onSubmit={handlePlaceOrder} className="space-y-6">
-                                {/* Contact Info Section */}
                                 <div className="space-y-4">
                                     <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-2">Contact Information</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -280,12 +261,13 @@ export const Cart: React.FC = () => {
                                             <label className="block text-xs font-bold text-slate-500 mb-1">Recipient Name *</label>
                                             <div className="relative">
                                                 <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                                <input 
+                                                <input
+                                                    type="text"
                                                     required
                                                     value={checkoutForm.recipientName}
-                                                    onChange={e => setCheckoutForm({...checkoutForm, recipientName: e.target.value})}
-                                                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" 
-                                                    placeholder="Full Name" 
+                                                    onChange={e => setCheckoutForm({ ...checkoutForm, recipientName: e.target.value })}
+                                                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
+                                                    placeholder="Juan Dela Cruz"
                                                 />
                                             </div>
                                         </div>
@@ -293,119 +275,101 @@ export const Cart: React.FC = () => {
                                             <label className="block text-xs font-bold text-slate-500 mb-1">Contact Number *</label>
                                             <div className="relative">
                                                 <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                                <input 
+                                                <input
+                                                    type="tel"
                                                     required
                                                     value={checkoutForm.contactNumber}
-                                                    onChange={e => setCheckoutForm({...checkoutForm, contactNumber: e.target.value})}
-                                                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" 
-                                                    placeholder="0917-XXX-XXXX" 
+                                                    onChange={e => setCheckoutForm({ ...checkoutForm, contactNumber: e.target.value })}
+                                                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
+                                                    placeholder="0917 123 4567"
                                                 />
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Address Section */}
                                 <div className="space-y-4">
                                     <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-2">Shipping Address</h3>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-500 mb-1">Street Address *</label>
-                                        <div className="relative">
-                                            <Home className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                            <input 
-                                                required
-                                                value={checkoutForm.street}
-                                                onChange={e => setCheckoutForm({...checkoutForm, street: e.target.value})}
-                                                className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" 
-                                                placeholder="House No., Street Name" 
-                                            />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">Street *</label>
+                                            <div className="relative">
+                                                <Home className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    value={checkoutForm.street}
+                                                    onChange={e => setCheckoutForm({ ...checkoutForm, street: e.target.value })}
+                                                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
+                                                    placeholder="123 Gen. T. de Leon St."
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-500 mb-1">Landmark *</label>
-                                        <div className="relative">
-                                            <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                            <input 
-                                                required
-                                                value={checkoutForm.landmark}
-                                                onChange={e => setCheckoutForm({...checkoutForm, landmark: e.target.value})}
-                                                className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" 
-                                                placeholder="e.g. Near Barangay Hall, Beside Bakery" 
-                                            />
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">Landmark</label>
+                                            <div className="relative">
+                                                <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                                <input
+                                                    type="text"
+                                                    value={checkoutForm.landmark}
+                                                    onChange={e => setCheckoutForm({ ...checkoutForm, landmark: e.target.value })}
+                                                    className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
+                                                    placeholder="Near Valenzuela City Hall"
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-xs font-bold text-slate-500 mb-1">City *</label>
-                                            <input 
+                                            <input
+                                                type="text"
                                                 required
                                                 value={checkoutForm.city}
-                                                onChange={e => setCheckoutForm({...checkoutForm, city: e.target.value})}
-                                                className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" 
-                                                placeholder="City" 
+                                                onChange={e => setCheckoutForm({ ...checkoutForm, city: e.target.value })}
+                                                className="w-full pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
+                                                placeholder="Valenzuela"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-500 mb-1">Province *</label>
-                                            <input 
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">Province/State *</label>
+                                            <input
+                                                type="text"
                                                 required
                                                 value={checkoutForm.state}
-                                                onChange={e => setCheckoutForm({...checkoutForm, state: e.target.value})}
-                                                className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" 
-                                                placeholder="Metro Manila" 
+                                                onChange={e => setCheckoutForm({ ...checkoutForm, state: e.target.value })}
+                                                className="w-full pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
+                                                placeholder="Metro Manila"
                                             />
                                         </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-500 mb-1">Zip Code *</label>
-                                            <input 
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">ZIP Code *</label>
+                                            <input
+                                                type="text"
                                                 required
                                                 value={checkoutForm.zipCode}
-                                                onChange={e => setCheckoutForm({...checkoutForm, zipCode: e.target.value})}
-                                                className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" 
-                                                placeholder="1440" 
+                                                onChange={e => setCheckoutForm({ ...checkoutForm, zipCode: e.target.value })}
+                                                className="w-full pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
+                                                placeholder="1442"
                                             />
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold text-slate-500 mb-1">Country *</label>
-                                            <input 
+                                            <input
+                                                type="text"
                                                 required
                                                 value={checkoutForm.country}
-                                                onChange={e => setCheckoutForm({...checkoutForm, country: e.target.value})}
-                                                className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" 
-                                                placeholder="Philippines" 
+                                                onChange={e => setCheckoutForm({ ...checkoutForm, country: e.target.value })}
+                                                className="w-full pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
+                                                placeholder="Philippines"
                                             />
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex justify-between items-center">
-                                    <span className="font-bold text-slate-700">Total Amount</span>
-                                    <span className="font-bold text-xl text-indigo-600">{CURRENCY}{total.toLocaleString()}</span>
+                                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                                    <button type="button" onClick={() => setIsCheckoutModalOpen(false)} className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">Cancel</button>
+                                    <button type="submit" form="checkoutForm" disabled={isSubmitting} className="px-4 py-2 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-50">
+                                        {isSubmitting ? 'Placing Order...' : 'Place Order'}
+                                    </button>
                                 </div>
                             </form>
-                        </div>
-                        
-                        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
-                            <button 
-                                onClick={() => setIsCheckoutModalOpen(false)}
-                                className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
-                                type="button"
-                                disabled={isSubmitting}
-                            >
-                                Cancel
-                            </button>
-                            <button 
-                                type="submit"
-                                form="checkoutForm"
-                                disabled={isSubmitting}
-                                className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-lg shadow-indigo-600/20 disabled:opacity-70"
-                            >
-                                {isSubmitting ? 'Placing Order...' : (
-                                    <>Place Order <ArrowRight className="w-4 h-4" /></>
-                                )}
-                            </button>
                         </div>
                     </>
                 )}

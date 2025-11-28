@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { MapPin, Award, Clock, Briefcase, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -6,9 +5,7 @@ import { Link } from 'react-router-dom';
 export const About: React.FC = () => {
   return (
     <div className="bg-white min-h-screen">
-      {/* Hero Section */}
       <div className="relative bg-slate-900 py-24 px-4 sm:px-6 lg:px-8 text-center">
-        {/* Image removed as requested */}
         <div className="relative z-10 max-w-3xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-serif font-bold text-white mb-6">
             Proudly Made in Valenzuela
@@ -19,7 +16,6 @@ export const About: React.FC = () => {
         </div>
       </div>
 
-      {/* Business Info Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-16">
            <div>
@@ -31,7 +27,6 @@ export const About: React.FC = () => {
               <p className="text-lg text-slate-600 mb-6 leading-relaxed">
                 We combine traditional Filipino craftsmanship with modern Augmented Reality (AR) technology, allowing you to visualize our locally made pieces in your home before you buy.
               </p>
-              
               <div className="space-y-6">
                   <div className="flex items-start gap-4">
                       <div className="p-3 bg-indigo-100 rounded-lg text-indigo-600 shrink-0">
@@ -42,7 +37,6 @@ export const About: React.FC = () => {
                           <p className="text-slate-600">123 Gen. T. de Leon Street<br/>Valenzuela City, Metro Manila 1442</p>
                       </div>
                   </div>
-
                   <div className="flex items-start gap-4">
                       <div className="p-3 bg-indigo-100 rounded-lg text-indigo-600 shrink-0">
                           <Briefcase className="w-5 h-5" />
@@ -59,7 +53,6 @@ export const About: React.FC = () => {
                           </p>
                       </div>
                   </div>
-
                    <div className="flex items-start gap-4">
                       <div className="p-3 bg-indigo-100 rounded-lg text-indigo-600 shrink-0">
                           <Clock className="w-5 h-5" />
@@ -73,7 +66,6 @@ export const About: React.FC = () => {
                   </div>
               </div>
            </div>
-           
            <div className="relative h-[500px] rounded-2xl overflow-hidden shadow-2xl bg-slate-100">
               <img 
                 src="https://images.unsplash.com/photo-1533090481720-856c6e3c1fdc?auto=format&fit=crop&w=800&q=80"
@@ -86,8 +78,6 @@ export const About: React.FC = () => {
               </div>
            </div>
         </div>
-
-        {/* Sample Work / Gallery */}
         <div className="py-8 border-t border-slate-100">
             <div className="flex justify-between items-end mb-8 mt-8">
                 <div>
@@ -98,10 +88,9 @@ export const About: React.FC = () => {
                     Explore Shop <ArrowRight className="w-4 h-4" />
                 </Link>
             </div>
-            
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div className="group relative overflow-hidden rounded-xl aspect-[4/3] cursor-pointer">
-                    <img src="https://images.unsplash.com/photo-1505693416388-b0346efee958?auto=format&fit=crop&w=800&q=80" alt="Palochina Bed" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <img src="https://i.ytimg.com/vi/hbsNo-u_pHg/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLAklslzmtLeq8m1fGLiSoMpty36Mw" alt="Palochina Bed" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-6">
                         <div>
                             <p className="text-white font-bold text-lg">Rustic Bed Frame</p>
@@ -133,4 +122,3 @@ export const About: React.FC = () => {
     </div>
   );
 };
-    

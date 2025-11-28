@@ -2,8 +2,13 @@
 // Mongoose-like Schema Definitions
 
 export enum UserRole {
-  CUSTOMER = 'customer',
+  USER = 'user',
   ADMIN = 'admin',
+}
+
+export enum AdminRole {
+  ADMIN = 'admin',
+  SUPERADMIN = 'superadmin',
 }
 
 export interface Dimensions {
@@ -73,4 +78,26 @@ export interface User {
   email: string;
   role: UserRole;
   address?: Address;
+}
+
+export interface DbUser {
+  _id?: string;
+  email: string;
+  password: string;
+  fname: string;
+  mname?: string;
+  lname: string;
+  contactNumber: string;
+  address: Address[];
+}
+
+export interface DbAdmin {
+  _id?: string;
+  fname: string;
+  mname?: string;
+  lname: string;
+  email: string;
+  username: string;
+  password: string;
+  role: AdminRole;
 }

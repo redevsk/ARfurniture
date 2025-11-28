@@ -48,13 +48,13 @@ const BannerCarousel: React.FC<{ banners: MarketingBanner[] }> = ({ banners }) =
   const prevSlide = () => setCurrentIndex((prev) => (prev - 1 + banners.length) % banners.length);
 
   return (
-      <div className="relative w-full h-[320px] bg-[#fdfbf7] rounded-none md:rounded-xl overflow-hidden mb-12 group border border-slate-100">
+      <div className="relative w-full md:h-[320px] h-auto bg-[#fdfbf7] rounded-none md:rounded-xl overflow-hidden mb-12 group border border-slate-100">
             <div 
               className="flex transition-transform duration-500 ease-in-out h-full" 
               style={{ transform: `translateX(-${currentIndex * 100}%)` }}
           >
               {banners.map((banner) => (
-                  <div key={banner._id} className="min-w-full h-full flex flex-col md:flex-row relative">
+                  <div key={banner._id} className="min-w-full flex flex-col md:flex-row relative">
                       {banner.badgeText && (
                           <div className="absolute top-0 left-0 z-10">
                               <div className="bg-[#CD3C32] text-white text-xs font-bold px-8 py-1 shadow-md transform -rotate-45 -translate-x-8 translate-y-4 w-32 text-center">
@@ -63,7 +63,7 @@ const BannerCarousel: React.FC<{ banners: MarketingBanner[] }> = ({ banners }) =
                           </div>
                       )}
                       
-                      <div className="md:w-1/2 relative h-full order-2 md:order-1">
+                      <div className="md:w-1/2 relative h-48 md:h-full order-2 md:order-1">
                           <img src={banner.imageUrl} alt={banner.title} className="w-full h-full object-cover" />
                       </div>
                       
@@ -103,7 +103,7 @@ const BannerCarousel: React.FC<{ banners: MarketingBanner[] }> = ({ banners }) =
               <ChevronRight className="w-6 h-6" />
           </button>
 
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-20">
               {banners.map((_, idx) => (
                   <button
                       key={idx}
@@ -188,9 +188,11 @@ export const Shop: React.FC = () => {
                         View All <ArrowRight className="w-4 h-4" />
                     </Link>
                </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="flex gap-4 overflow-x-auto md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-6 pb-2">
                   {newArrivals.slice(0, 4).map(product => (
-                      <ProductCard key={product._id} product={product} />
+                      <div key={product._id} className="flex-none w-64 md:w-auto">
+                          <ProductCard product={product} />
+                      </div>
                   ))}
               </div>
           </section>
@@ -208,9 +210,11 @@ export const Shop: React.FC = () => {
                         View All <ArrowRight className="w-4 h-4" />
                     </Link>
                </div>
-               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+               <div className="flex gap-4 overflow-x-auto md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-6 pb-2">
                   {featuredProducts.slice(0, 4).map(product => (
-                      <ProductCard key={product._id} product={product} />
+                      <div key={product._id} className="flex-none w-64 md:w-auto">
+                          <ProductCard product={product} />
+                      </div>
                   ))}
               </div>
           </section>
@@ -233,7 +237,7 @@ export const Shop: React.FC = () => {
       
       {/* 5. Products Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="bg-white rounded-xl p-4 h-80 animate-pulse border border-slate-100">
               <div className="bg-slate-200 h-48 rounded-lg mb-4"></div>
@@ -243,7 +247,7 @@ export const Shop: React.FC = () => {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {filteredProducts.map(product => (
              <ProductCard key={product._id} product={product} />
           ))}
