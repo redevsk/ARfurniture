@@ -1,13 +1,15 @@
 Customer Site
 
-> Login  
-> Sign Up  
-> About
+Login  
+Sign Up  
+About
+
     ├── Business Info  
     ├── Location  
     └── Collection  
-> Cart  
-> Home
+Cart  
+Home
+
     ├── New Arrivals  
     ├── Featured  
     ├── Chairs  
@@ -17,7 +19,8 @@ Customer Site
     ├── Sale  
     ├── All Products  
     └── Footer  
-> Individual Product View (3D Model, AR View)
+Individual Product View (3D Model, AR View)
+
     ├── Product Description  
     ├── AI Assistant  
     ├── Images  
@@ -28,13 +31,13 @@ Customer Site
 
 Admin Site
 
-> Login  
-> Log Out  
-> Dashboard (Analytics)  
-> Products  
-> Orders  
-> Marketing  
-> Admin List (Super Admin Only)
+Login  
+Log Out  
+Dashboard (Analytics)  
+Products  
+Orders  
+Marketing  
+Admin List (Super Admin Only)
 
 
 Modules
