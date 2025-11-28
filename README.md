@@ -3,13 +3,11 @@ Customer Site
 Login  
 Sign Up  
 About
-
     ├── Business Info  
     ├── Location  
     └── Collection  
 Cart  
 Home
-
     ├── New Arrivals  
     ├── Featured  
     ├── Chairs  
@@ -20,7 +18,6 @@ Home
     ├── All Products  
     └── Footer  
 Individual Product View (3D Model, AR View)
-
     ├── Product Description  
     ├── AI Assistant  
     ├── Images  
