@@ -1,13 +1,13 @@
 ===== Index (Customer Site) =====
-> Login
-> Sign up
-> About
+.> Login
+.> Sign up
+.> About
     -- subsections --
     L Business Info
     L Location
     L Collection
-> Cart
-> home
+.> Cart
+.> home
   L New Arrivals
   L Featured
   L Chairs
@@ -17,7 +17,7 @@
   L Sale
   L All Products
   L Footer
-> individual products view (3d Model, AR View)
+.> individual products view (3d Model, AR View)
   -- subsections --
   L Product Description
   L AI Assistant
@@ -28,13 +28,13 @@
   L Add to cart (action)
 
 ===== Admin Site =====
-> Login
-> Log Out
-> Dashboard (Analytics)
-> Products
-> Orders
-> Marketing
-> Admin List (Only accessible to Super Admin/s)
+.> Login
+.> Log Out
+.> Dashboard (Analytics)
+.> Products
+.> Orders
+.> Marketing
+.> Admin List (Only accessible to Super Admin/s)
 
 ===== Totals =====
 - Total views: 12
@@ -58,3 +58,4 @@ Modules
 Totals
 - Total views: 12
 - Total modules: 13
+
