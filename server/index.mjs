@@ -245,11 +245,47 @@ app.put('/api/products/:id', async (req, res) => {
   }
 })
 
+// Helper to delete an entire folder recursively
+const deleteProductFolders = (productName) => {
+  if (!productName) return
+  const folderName = productName.toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 50)
+    || 'uncategorized'
+  
+  const imageFolderPath = path.join(__dirname, '..', 'products', 'images', folderName)
+  const modelFolderPath = path.join(__dirname, '..', 'products', '3dmodels', folderName)
+  
+  // Delete image folder (includes gallery subfolder)
+  if (fs.existsSync(imageFolderPath)) {
+    fs.rmSync(imageFolderPath, { recursive: true, force: true })
+    console.log('✓ Deleted image folder:', imageFolderPath)
+  }
+  
+  // Delete model folder
+  if (fs.existsSync(modelFolderPath)) {
+    fs.rmSync(modelFolderPath, { recursive: true, force: true })
+    console.log('✓ Deleted model folder:', modelFolderPath)
+  }
+}
+
 // Delete product
 app.delete('/api/products/:id', async (req, res) => {
   try {
     const { ObjectId } = await import('mongodb')
+    
+    // First, get the product to know its name (for folder deletion)
+    const product = await products.findOne({ _id: new ObjectId(req.params.id) })
+    
+    // Delete from database
     await products.deleteOne({ _id: new ObjectId(req.params.id) })
+    
+    // Delete product folders (images and 3dmodels)
+    if (product && product.name) {
+      deleteProductFolders(product.name)
+    }
+    
     return res.json({ success: true })
   } catch (e) {
     console.error('Delete product error:', e)
@@ -271,13 +307,29 @@ const sanitizeFolderName = (name) => {
     || 'uncategorized'
 }
 
-// Configure multer for file storage with dynamic product folders
+// Configure multer for main image storage (1 per product)
 const imageStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     const productFolder = sanitizeFolderName(req.body.productName || req.query.productName)
     const dir = path.join(__dirname, '..', 'products', 'images', productFolder)
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-    req.productFolder = productFolder  // Store for later use
+    req.productFolder = productFolder
+    cb(null, dir)
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg'
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`
+    cb(null, uniqueName)
+  }
+})
+
+// Configure multer for additional images (multiple per product)
+const additionalImageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const productFolder = sanitizeFolderName(req.body.productName || req.query.productName)
+    const dir = path.join(__dirname, '..', 'products', 'images', productFolder, 'gallery')
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+    req.productFolder = productFolder
     cb(null, dir)
   },
   filename: (req, file, cb) => {
@@ -314,6 +366,18 @@ const uploadImage = multer({
   }
 })
 
+const uploadAdditionalImage = multer({ 
+  storage: additionalImageStorage,
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true)
+    } else {
+      cb(new Error('Only image files are allowed'))
+    }
+  }
+})
+
 const uploadModel = multer({ 
   storage: modelStorage,
   limits: { fileSize: 500 * 1024 * 1024 }, // 500MB limit for 3D models
@@ -326,13 +390,36 @@ const uploadModel = multer({
   }
 })
 
+// Helper to delete all files in a folder (except the one being uploaded)
+const clearProductFolder = (folderPath, keepFilename) => {
+  try {
+    if (!fs.existsSync(folderPath)) return
+    const files = fs.readdirSync(folderPath)
+    for (const file of files) {
+      if (file !== keepFilename) {
+        const filePath = path.join(folderPath, file)
+        fs.unlinkSync(filePath)
+        console.log('✓ Deleted old file:', filePath)
+      }
+    }
+  } catch (e) {
+    console.error('Failed to clear folder:', e)
+  }
+}
+
 // Upload image endpoint
 app.post('/api/upload/image', uploadImage.single('file'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' })
     }
+    
     const productFolder = req.productFolder || 'uncategorized'
+    const folderPath = path.join(__dirname, '..', 'products', 'images', productFolder)
+    
+    // Delete all other files in this product's image folder
+    clearProductFolder(folderPath, req.file.filename)
+    
     const url = `/products/images/${productFolder}/${req.file.filename}`
     console.log('✓ Image uploaded:', url)
     return res.json({ url })
@@ -342,13 +429,62 @@ app.post('/api/upload/image', uploadImage.single('file'), (req, res) => {
   }
 })
 
+// Upload additional image endpoint (goes to gallery subfolder, no auto-delete)
+app.post('/api/upload/additional-image', uploadAdditionalImage.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' })
+    }
+    
+    const productFolder = req.productFolder || 'uncategorized'
+    const url = `/products/images/${productFolder}/gallery/${req.file.filename}`
+    console.log('✓ Additional image uploaded:', url)
+    return res.json({ url })
+  } catch (e) {
+    console.error('Additional image upload error:', e)
+    return res.status(500).json({ error: 'Upload failed' })
+  }
+})
+
+// Delete additional image endpoint
+app.delete('/api/upload/additional-image', (req, res) => {
+  try {
+    const imageUrl = req.query.url
+    if (!imageUrl) {
+      return res.status(400).json({ error: 'No URL provided' })
+    }
+    
+    const filePath = path.join(__dirname, '..', decodeURIComponent(imageUrl))
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath)
+      console.log('✓ Deleted additional image:', imageUrl)
+    }
+    return res.json({ success: true })
+  } catch (e) {
+    console.error('Delete additional image error:', e)
+    return res.status(500).json({ error: 'Delete failed' })
+  }
+})
+
 // Upload GLB model endpoint
 app.post('/api/upload/model', uploadModel.single('file'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' })
     }
+    
     const productFolder = req.productFolder || 'uncategorized'
+    const folderPath = path.join(__dirname, '..', 'products', '3dmodels', productFolder)
+    
+    console.log('📁 Model folder:', folderPath)
+    console.log('📄 Uploaded file:', req.file.filename)
+    console.log('📋 Files before cleanup:', fs.existsSync(folderPath) ? fs.readdirSync(folderPath) : [])
+    
+    // Delete all other files in this product's model folder
+    clearProductFolder(folderPath, req.file.filename)
+    
+    console.log('📋 Files after cleanup:', fs.existsSync(folderPath) ? fs.readdirSync(folderPath) : [])
+    
     const url = `/products/3dmodels/${productFolder}/${req.file.filename}`
     console.log('✓ Model uploaded:', url)
     return res.json({ url })

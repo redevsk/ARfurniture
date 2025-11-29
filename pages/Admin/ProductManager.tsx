@@ -77,6 +77,13 @@ export const ProductManager: React.FC = () => {
     }
   };
 
+  // Helper to extract filename from URL path
+  const getFilenameFromUrl = (url: string): string => {
+    if (!url) return '';
+    const parts = url.split('/');
+    return parts[parts.length - 1] || '';
+  };
+
   const handleEdit = (product: Product) => {
     setEditingId(product._id);
     setFormData({
@@ -94,11 +101,12 @@ export const ProductManager: React.FC = () => {
       isFeatured: product.isFeatured || false,
       isNewArrival: product.isNewArrival || false
     });
-    // Reset upload states
+    // Reset upload states but show existing filenames
     setImageFile(null);
     setImagePreview(product.imageUrl || '');
     setModelFile(null);
-    setModelFileName('');
+    // Show existing model filename from URL
+    setModelFileName(getFilenameFromUrl(product.arModelUrl || ''));
     // Load additional images
     setAdditionalImages(product.images || []);
     setIsModalOpen(true);
@@ -177,6 +185,7 @@ export const ProductManager: React.FC = () => {
   // Upload file to server using FormData (actual file upload, not base64)
   // Files are organized into product-specific folders
   // Save as RELATIVE URL so it works from any host (localhost, LAN IP, or tunnel)
+  // Server automatically deletes old files in the product folder
   const uploadFile = async (file: File, type: 'image' | 'model', productName?: string): Promise<string> => {
     const formDataUpload = new FormData();
     formDataUpload.append('file', file);
@@ -184,7 +193,6 @@ export const ProductManager: React.FC = () => {
     // Pass productName as query param (multer reads body AFTER file upload, so body fields aren't available in destination)
     const folderName = encodeURIComponent(productName || 'uncategorized');
     
-    // Upload to appropriate server based on where we're running
     const response = await fetch(`${UPLOAD_BASE}/api/upload/${type}?productName=${folderName}`, {
       method: 'POST',
       body: formDataUpload  // No Content-Type header - browser sets it automatically with boundary
@@ -199,6 +207,33 @@ export const ProductManager: React.FC = () => {
     return result.url;
   };
 
+  // Upload additional image (to gallery subfolder)
+  const uploadAdditionalImage = async (file: File, productName?: string): Promise<string> => {
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', file);
+    
+    const folderName = encodeURIComponent(productName || 'uncategorized');
+    
+    const response = await fetch(`${UPLOAD_BASE}/api/upload/additional-image?productName=${folderName}`, {
+      method: 'POST',
+      body: formDataUpload
+    });
+    
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+    
+    const result = await response.json();
+    return result.url;
+  };
+
+  // Delete additional image from server
+  const deleteAdditionalImage = async (imageUrl: string): Promise<void> => {
+    await fetch(`${UPLOAD_BASE}/api/upload/additional-image?url=${encodeURIComponent(imageUrl)}`, {
+      method: 'DELETE'
+    });
+  };
+
   // Additional images handlers
   const handleAdditionalImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -209,7 +244,7 @@ export const ProductManager: React.FC = () => {
       }
       try {
         setUploadingAdditionalImage(true);
-        const uploadedUrl = await uploadFile(file, 'image', formData.name);
+        const uploadedUrl = await uploadAdditionalImage(file, formData.name);
         setAdditionalImages(prev => [...prev, uploadedUrl]);
       } catch (err) {
         setFormError('Failed to upload additional image');
@@ -223,7 +258,16 @@ export const ProductManager: React.FC = () => {
     }
   };
 
-  const handleRemoveAdditionalImage = (index: number) => {
+  const handleRemoveAdditionalImage = async (index: number) => {
+    const imageUrl = additionalImages[index];
+    // Delete from server if it's a local file
+    if (imageUrl.startsWith('/products/')) {
+      try {
+        await deleteAdditionalImage(imageUrl);
+      } catch (err) {
+        console.error('Failed to delete image from server:', err);
+      }
+    }
     setAdditionalImages(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -485,7 +529,7 @@ export const ProductManager: React.FC = () => {
                                             onClick={() => imageInputRef.current?.click()}
                                             className="flex-1 px-4 py-2 rounded-lg border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 transition-colors text-left text-sm text-slate-600"
                                         >
-                                            {imageFile ? imageFile.name : (formData.imageUrl ? 'Image selected' : 'Click to select image...')}
+                                            {imageFile ? imageFile.name : (formData.imageUrl ? getFilenameFromUrl(formData.imageUrl) : 'Click to select image...')}
                                         </button>
                                         <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 border border-slate-200 overflow-hidden">
                                             {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover" alt="Preview" /> : <Upload className="w-4 h-4 text-slate-400" />}
@@ -508,7 +552,7 @@ export const ProductManager: React.FC = () => {
                                         className="w-full px-4 py-2 rounded-lg border border-dashed border-slate-300 hover:border-purple-400 hover:bg-purple-50 transition-colors text-left text-sm text-slate-600 flex items-center gap-2"
                                     >
                                         <Box className="w-4 h-4 text-purple-500" />
-                                        {modelFile ? modelFileName : (formData.arModelUrl ? 'Model selected' : 'Click to select .glb file...')}
+                                        {modelFile ? modelFileName : (formData.arModelUrl ? getFilenameFromUrl(formData.arModelUrl) : 'Click to select .glb file...')}
                                     </button>
                                     {uploadingModel && <p className="text-xs text-purple-600 mt-1">Uploading model...</p>}
                                 </div>
