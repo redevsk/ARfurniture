@@ -48,6 +48,9 @@ await client.connect()
 const db = client.db('arecommerce')
 const users = db.collection('users')
 const admins = db.collection('admins')
+const products = db.collection('products')
+const orders = db.collection('orders')
+const banners = db.collection('banners')
 
 console.log('✓ Connected to MongoDB')
 
@@ -146,6 +149,198 @@ app.post('/api/admins/login', async (req, res) => {
 const port = process.env.PORT || 4000
 app.listen(port, () => {
   console.log(`✓ Auth server listening on http://localhost:${port}`)
+})
+
+// =====================
+// PRODUCTS API
+// =====================
+
+// Get all products
+app.get('/api/products', async (req, res) => {
+  try {
+    const allProducts = await products.find({}).toArray()
+    const normalized = allProducts.map(p => ({
+      ...p,
+      _id: p._id.toString(),
+      createdAt: p.createdAt ? new Date(p.createdAt) : new Date()
+    }))
+    return res.json(normalized)
+  } catch (e) {
+    console.error('Get products error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Get product by ID
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    const { ObjectId } = await import('mongodb')
+    const product = await products.findOne({ _id: new ObjectId(req.params.id) })
+    if (!product) return res.status(404).json({ error: 'Product not found' })
+    return res.json({
+      ...product,
+      _id: product._id.toString(),
+      createdAt: product.createdAt ? new Date(product.createdAt) : new Date()
+    })
+  } catch (e) {
+    console.error('Get product error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Create product
+app.post('/api/products', async (req, res) => {
+  try {
+    const productData = {
+      ...req.body,
+      createdAt: new Date()
+    }
+    const result = await products.insertOne(productData)
+    return res.json({ ...productData, _id: result.insertedId.toString() })
+  } catch (e) {
+    console.error('Create product error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Update product
+app.put('/api/products/:id', async (req, res) => {
+  try {
+    const { ObjectId } = await import('mongodb')
+    const { _id, ...updates } = req.body
+    await products.updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: updates }
+    )
+    const updated = await products.findOne({ _id: new ObjectId(req.params.id) })
+    return res.json({ ...updated, _id: updated._id.toString() })
+  } catch (e) {
+    console.error('Update product error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Delete product
+app.delete('/api/products/:id', async (req, res) => {
+  try {
+    const { ObjectId } = await import('mongodb')
+    await products.deleteOne({ _id: new ObjectId(req.params.id) })
+    return res.json({ success: true })
+  } catch (e) {
+    console.error('Delete product error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// =====================
+// ORDERS API
+// =====================
+
+// Get all orders
+app.get('/api/orders', async (req, res) => {
+  try {
+    const allOrders = await orders.find({}).sort({ createdAt: -1 }).toArray()
+    const normalized = allOrders.map(o => ({
+      ...o,
+      _id: o._id.toString(),
+      createdAt: o.createdAt ? new Date(o.createdAt) : new Date()
+    }))
+    return res.json(normalized)
+  } catch (e) {
+    console.error('Get orders error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Create order
+app.post('/api/orders', async (req, res) => {
+  try {
+    const orderData = {
+      ...req.body,
+      status: 'pending',
+      createdAt: new Date()
+    }
+    const result = await orders.insertOne(orderData)
+    return res.json({ ...orderData, _id: result.insertedId.toString() })
+  } catch (e) {
+    console.error('Create order error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Update order status
+app.patch('/api/orders/:id/status', async (req, res) => {
+  try {
+    const { ObjectId } = await import('mongodb')
+    const { status } = req.body
+    await orders.updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: { status } }
+    )
+    return res.json({ success: true })
+  } catch (e) {
+    console.error('Update order status error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// =====================
+// BANNERS API
+// =====================
+
+// Get all banners
+app.get('/api/banners', async (req, res) => {
+  try {
+    const allBanners = await banners.find({}).toArray()
+    const normalized = allBanners.map(b => ({
+      ...b,
+      _id: b._id.toString()
+    }))
+    return res.json(normalized)
+  } catch (e) {
+    console.error('Get banners error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Create banner
+app.post('/api/banners', async (req, res) => {
+  try {
+    const result = await banners.insertOne(req.body)
+    return res.json({ ...req.body, _id: result.insertedId.toString() })
+  } catch (e) {
+    console.error('Create banner error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Update banner
+app.put('/api/banners/:id', async (req, res) => {
+  try {
+    const { ObjectId } = await import('mongodb')
+    const { _id, ...updates } = req.body
+    await banners.updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: updates }
+    )
+    const updated = await banners.findOne({ _id: new ObjectId(req.params.id) })
+    return res.json({ ...updated, _id: updated._id.toString() })
+  } catch (e) {
+    console.error('Update banner error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Delete banner
+app.delete('/api/banners/:id', async (req, res) => {
+  try {
+    const { ObjectId } = await import('mongodb')
+    await banners.deleteOne({ _id: new ObjectId(req.params.id) })
+    return res.json({ success: true })
+  } catch (e) {
+    console.error('Delete banner error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
 })
 
 const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

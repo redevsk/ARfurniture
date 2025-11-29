@@ -4,14 +4,20 @@ import { X, Smartphone, ScanLine } from 'lucide-react';
 interface QRCodeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  url?: string;
+  productId?: string;
+  productName?: string;
 }
 
-export const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, url }) => {
+export const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, productId, productName }) => {
   if (!isOpen) return null;
 
-  const currentUrl = url || window.location.href;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(currentUrl)}`;
+  // Generate URL - links to product page with AR launch flag
+  const baseUrl = window.location.origin;
+  const productUrl = productId 
+    ? `${baseUrl}/#/product/${productId}?ar=true`
+    : window.location.href;
+  
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(productUrl)}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
@@ -32,7 +38,7 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, url }
             View in AR
           </h2>
           <p className="text-slate-500 mb-8 text-sm">
-            Scan this QR code with your mobile device to see this furniture in your space.
+            Scan this QR code with your phone to instantly launch AR and see {productName ? <strong className="text-slate-700">{productName}</strong> : 'this furniture'} in your space.
           </p>
 
           <div className="bg-white p-4 rounded-xl border-2 border-dashed border-slate-200 inline-block mb-6 relative group">

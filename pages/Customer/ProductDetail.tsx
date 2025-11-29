@@ -1,6 +1,6 @@
 
-import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { ShoppingCart, Box, Wand2, Send, Smartphone, Truck, RefreshCw, ShieldCheck, Image as ImageIcon, CheckCircle } from 'lucide-react';
 import { Product } from '../../types';
 import { db } from '../../services/db';
@@ -12,9 +12,14 @@ import { CURRENCY } from '../../constants';
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [product, setProduct] = useState<Product | undefined>();
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // AR Launch overlay (shown when coming from QR scan)
+  const [showARLaunch, setShowARLaunch] = useState(false);
+  const modelViewerRef = useRef<HTMLElement | null>(null);
   
   // View State
   const [viewMode, setViewMode] = useState<'image' | '3d'>('image');
@@ -71,6 +76,30 @@ export const ProductDetail: React.FC = () => {
     loadData();
   }, [id]);
 
+  // Check for AR launch parameter from QR code scan
+  useEffect(() => {
+    if (searchParams.get('ar') === 'true' && product && !loading) {
+      setShowARLaunch(true);
+      // Clear the ar param from URL
+      searchParams.delete('ar');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, product, loading]);
+
+  // Function to trigger AR on model-viewer
+  const launchAR = () => {
+    setShowARLaunch(false);
+    setViewMode('3d');
+    
+    // Wait for model-viewer to mount, then trigger AR
+    setTimeout(() => {
+      const modelViewer = document.querySelector('model-viewer');
+      if (modelViewer && (modelViewer as any).activateAR) {
+        (modelViewer as any).activateAR();
+      }
+    }, 500);
+  };
+
   const handleChatSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       if(!product || !chatQuestion.trim()) return;
@@ -100,6 +129,39 @@ export const ProductDetail: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
+      {/* Full-screen AR Launch Overlay (shown when coming from QR scan) */}
+      {showARLaunch && (
+        <div className="fixed inset-0 z-[100] bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-900 flex flex-col items-center justify-center p-6">
+          <div className="text-center max-w-sm">
+            {/* Product preview */}
+            <div className="w-32 h-32 mx-auto mb-6 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
+              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+            </div>
+            
+            <h1 className="text-2xl font-bold text-white mb-2">{product.name}</h1>
+            <p className="text-indigo-200 mb-8">Ready to view in your space</p>
+            
+            {/* Big AR Launch Button */}
+            <button
+              onClick={launchAR}
+              className="w-full bg-white text-indigo-900 py-5 px-8 rounded-2xl font-bold text-lg shadow-2xl hover:bg-indigo-50 transition-all flex items-center justify-center gap-3 animate-pulse"
+            >
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path>
+              </svg>
+              Tap to View in AR
+            </button>
+            
+            <button
+              onClick={() => setShowARLaunch(false)}
+              className="mt-4 text-indigo-300 hover:text-white text-sm transition-colors"
+            >
+              View product details instead
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Toast Notification */}
       {showToast && (
           <div className="fixed top-24 right-4 z-50 animate-in slide-in-from-right duration-300">
@@ -334,6 +396,8 @@ export const ProductDetail: React.FC = () => {
       <QRCodeModal 
         isOpen={isQRModalOpen}
         onClose={() => setIsQRModalOpen(false)}
+        productId={product._id}
+        productName={product.name}
       />
     </div>
   );

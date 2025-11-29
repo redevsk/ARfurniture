@@ -1,8 +1,11 @@
 
-import { Product, Order, UserRole, MarketingBanner } from '../types';
+import { Product, Order, MarketingBanner } from '../types';
 
-// Mock Data simulating a MongoDB database state
-const INITIAL_PRODUCTS: Product[] = [
+// API Base URL - uses the auth server
+const API_BASE = (import.meta as any).env?.VITE_AUTH_API_BASE?.replace(/\/$/, '') || 'http://localhost:4000';
+
+// Fallback data for when API is unavailable
+const FALLBACK_PRODUCTS: Product[] = [
   {
     _id: '1',
     name: 'Eames Style Lounge Chair',
@@ -11,91 +14,15 @@ const INITIAL_PRODUCTS: Product[] = [
     category: 'Chairs',
     stock: 15,
     imageUrl: 'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?auto=format&fit=crop&w=800&q=80',
-    arModelUrl: 'https://modelviewer.dev/shared-assets/models/Chair.glb',
+    arModelUrl: 'products/3dmodels/white_mesh.glb',
     dimensions: { width: 84, height: 84, depth: 85, unit: 'cm' },
     isFeatured: true,
     isNewArrival: false,
     createdAt: new Date(),
   },
-  {
-    _id: '2',
-    name: 'Modern Fabric Sofa',
-    description: 'Minimalist grey fabric sofa. Generous seating with a sleek profile.',
-    price: 24999,
-    category: 'Sofas',
-    stock: 8,
-    imageUrl: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80',
-    images: [
-      'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1550226891-ef816aed4a98?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=800&q=80'
-    ],
-    // UPDATED: Dummy AR from web (Astronaut)
-    arModelUrl: 'https://modelviewer.dev/shared-assets/models/Astronaut.glb', 
-    dimensions: { width: 200, height: 80, depth: 90, unit: 'cm' },
-    isFeatured: true,
-    isNewArrival: true,
-    createdAt: new Date(),
-  },  
-  {
-    _id: '3',
-    name: 'Rustic Palochina Bed Frame',
-    description: 'Handcrafted from upcycled Palochina wood. Durable, sustainable, and adds a warm rustic vibe to your bedroom. Proudly made in Valenzuela.',
-    price: 8500,
-    category: 'Beds',
-    stock: 12,
-    imageUrl: 'https://i.ytimg.com/vi/hbsNo-u_pHg/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLAklslzmtLeq8m1fGLiSoMpty36Mw',
-    arModelUrl: 'https://modelviewer.dev/shared-assets/models/Canoe.glb', // Placeholder model
-    dimensions: { width: 152, height: 40, depth: 198, unit: 'cm' },
-    isFeatured: true,
-    isNewArrival: true,
-    createdAt: new Date(),
-  },
-  {
-    _id: '4',
-    name: 'Industrial Coffee Table',
-    description: 'Solid wood top with metal legs. Adds a rustic touch to any living room.',
-    price: 4500,
-    category: 'Tables',
-    stock: 20,
-    imageUrl: 'https://images.unsplash.com/photo-1532372320572-cda25653a26d?auto=format&fit=crop&w=800&q=80',
-    arModelUrl: 'https://modelviewer.dev/shared-assets/models/Mixer.glb', 
-    dimensions: { width: 110, height: 45, depth: 60, unit: 'cm' },
-    isFeatured: false,
-    isNewArrival: false,
-    createdAt: new Date(),
-  },
-  {
-    _id: '5',
-    name: 'Palochina Multi-Rack',
-    description: 'Versatile 3-layer rack made from smooth-finished Palochina. Perfect for plants, books, or kitchen display.',
-    price: 1200,
-    category: 'Decor',
-    stock: 50,
-    imageUrl: 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?auto=format&fit=crop&w=800&q=80',
-    arModelUrl: 'https://modelviewer.dev/shared-assets/models/NeilArmstrong.glb', 
-    dimensions: { width: 60, height: 90, depth: 30, unit: 'cm' },
-    isFeatured: false,
-    isNewArrival: true,
-    createdAt: new Date(),
-  },
-  {
-    _id: '6',
-    name: 'Palochina Dining Table',
-    description: 'Versatile 3-layer rack made from smooth-finished Palochina. Perfect for plants, books, or kitchen display.',
-    price: 1200,
-    category: 'Decor',
-    stock: 50,
-    imageUrl: 'https://5.imimg.com/data5/SELLER/Default/2024/10/459336265/QN/SE/VG/2940572/teak-wood-dining-table-set.webp',
-    arModelUrl: 'https://modelviewer.dev/shared-assets/models/NeilArmstrong.glb', 
-    dimensions: { width: 60, height: 90, depth: 30, unit: 'cm' },
-    isFeatured: false,
-    isNewArrival: true,
-    createdAt: new Date(),
-  }
 ];
 
-const INITIAL_BANNERS: MarketingBanner[] = [
+const FALLBACK_BANNERS: MarketingBanner[] = [
   {
     _id: 'banner-1',
     title: 'Pinoy Craftsmanship Sale',
@@ -107,201 +34,146 @@ const INITIAL_BANNERS: MarketingBanner[] = [
     link: '/',
     isActive: true
   },
-  {
-    _id: 'banner-2',
-    title: 'Modern Work from Home',
-    subtitle: 'Work in Style',
-    description: 'Transform your home office with ergonomic chairs and sleek desks.',
-    imageUrl: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1200&q=80',
-    badgeText: 'NEW',
-    buttonText: 'EXPLORE',
-    link: '/',
-    isActive: true
-  },
-  {
-    _id: 'banner-3',
-    title: 'Minimalist Dining Sets',
-    subtitle: 'Salo-Salo Together',
-    description: 'Clean lines and natural materials for the perfect family feast.',
-    imageUrl: 'https://images.unsplash.com/photo-1617103996702-96ff29b1c467?auto=format&fit=crop&w=1200&q=80',
-    badgeText: 'TRENDING',
-    buttonText: 'VIEW SETS',
-    link: '/',
-    isActive: true
-  }
 ];
 
-const INITIAL_ORDERS: Order[] = [
-  {
-    _id: 'ord-2839',
-    userId: 'usr-101',
-    customerName: 'Maria Santos',
-    recipientName: 'Maria Santos',
-    contactNumber: '0917-123-4567',
-    items: [{ ...INITIAL_PRODUCTS[0], quantity: 1 }],
-    totalAmount: 18500,
-    shippingAddress: {
-        street: '123 Gen. T. de Leon',
-        city: 'Valenzuela City',
-        state: 'Metro Manila',
-        zipCode: '1442',
-        country: 'Philippines',
-        landmark: 'Near Barangay Hall'
-    },
-    status: 'pending',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2), 
-  },
-  {
-    _id: 'ord-2838',
-    userId: 'usr-102',
-    customerName: 'Juan Dela Cruz',
-    recipientName: 'Juan Dela Cruz',
-    contactNumber: '0918-987-6543',
-    items: [{ ...INITIAL_PRODUCTS[4], quantity: 2 }, { ...INITIAL_PRODUCTS[2], quantity: 1 }],
-    totalAmount: 10900,
-    shippingAddress: {
-        street: '456 Maysan Road',
-        city: 'Valenzuela City',
-        state: 'Metro Manila',
-        zipCode: '1440',
-        country: 'Philippines',
-        landmark: 'Beside Shell Station'
-    },
-    status: 'shipped',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24), 
-  },
-  {
-    _id: 'ord-2837',
-    userId: 'usr-103',
-    customerName: 'Grace Reyes',
-    recipientName: 'Lola Remedios',
-    contactNumber: '0920-555-4444',
-    items: [{ ...INITIAL_PRODUCTS[1], quantity: 1 }],
-    totalAmount: 24999,
-    shippingAddress: {
-        street: '789 MacArthur Highway',
-        city: 'Valenzuela City',
-        state: 'Metro Manila',
-        zipCode: '1441',
-        country: 'Philippines',
-        landmark: 'Front of SM Valenzuela'
-    },
-    status: 'delivered',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48), 
-  }
-];
-
-class MockDatabase {
-  private products: Product[] = [...INITIAL_PRODUCTS];
-  private orders: Order[] = [...INITIAL_ORDERS];
-  private banners: MarketingBanner[] = [...INITIAL_BANNERS];
-
-  // --- Products ---
+class Database {
+  // =====================
+  // PRODUCTS
+  // =====================
   async getProducts(): Promise<Product[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve([...this.products]), 300);
-    });
+    try {
+      const res = await fetch(`${API_BASE}/api/products`);
+      if (!res.ok) throw new Error('Failed to fetch products');
+      const data = await res.json();
+      return data.map((p: any) => ({
+        ...p,
+        createdAt: new Date(p.createdAt)
+      }));
+    } catch (e) {
+      console.warn('Using fallback products:', e);
+      return FALLBACK_PRODUCTS;
+    }
   }
 
   async getProductById(id: string): Promise<Product | undefined> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(this.products.find(p => p._id === id)), 200);
-    });
+    try {
+      const res = await fetch(`${API_BASE}/api/products/${id}`);
+      if (!res.ok) return undefined;
+      const data = await res.json();
+      return { ...data, createdAt: new Date(data.createdAt) };
+    } catch (e) {
+      console.warn('Failed to fetch product:', e);
+      return FALLBACK_PRODUCTS.find(p => p._id === id);
+    }
   }
 
   async createProduct(product: Omit<Product, '_id' | 'createdAt'>): Promise<Product> {
-    return new Promise((resolve) => {
-      const newProduct: Product = {
-        ...product,
-        _id: Math.random().toString(36).substring(7),
-        createdAt: new Date(),
-      };
-      this.products.push(newProduct);
-      resolve(newProduct);
+    const res = await fetch(`${API_BASE}/api/products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(product)
     });
+    if (!res.ok) throw new Error('Failed to create product');
+    const data = await res.json();
+    return { ...data, createdAt: new Date(data.createdAt) };
   }
 
   async updateProduct(id: string, updates: Partial<Product>): Promise<Product> {
-    return new Promise((resolve, reject) => {
-        const index = this.products.findIndex(p => p._id === id);
-        if (index !== -1) {
-            this.products[index] = { ...this.products[index], ...updates };
-            resolve(this.products[index]);
-        } else {
-            reject(new Error("Product not found"));
-        }
+    const res = await fetch(`${API_BASE}/api/products/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
     });
+    if (!res.ok) throw new Error('Failed to update product');
+    const data = await res.json();
+    return { ...data, createdAt: new Date(data.createdAt) };
   }
 
   async deleteProduct(id: string): Promise<void> {
-    return new Promise((resolve) => {
-      this.products = this.products.filter(p => p._id !== id);
-      resolve();
+    const res = await fetch(`${API_BASE}/api/products/${id}`, {
+      method: 'DELETE'
     });
+    if (!res.ok) throw new Error('Failed to delete product');
   }
 
-  // --- Orders ---
-  async createOrder(order: Omit<Order, '_id' | 'createdAt' | 'status'>): Promise<Order> {
-    return new Promise((resolve) => {
-      const newOrder: Order = {
-        ...order,
-        _id: 'ord-' + Math.random().toString(36).substring(7).substr(0,4),
-        status: 'pending',
-        createdAt: new Date(),
-      };
-      this.orders.unshift(newOrder); 
-      resolve(newOrder);
-    });
-  }
-
+  // =====================
+  // ORDERS
+  // =====================
   async getOrders(): Promise<Order[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve([...this.orders]), 300);
+    try {
+      const res = await fetch(`${API_BASE}/api/orders`);
+      if (!res.ok) throw new Error('Failed to fetch orders');
+      const data = await res.json();
+      return data.map((o: any) => ({
+        ...o,
+        createdAt: new Date(o.createdAt)
+      }));
+    } catch (e) {
+      console.warn('Failed to fetch orders:', e);
+      return [];
+    }
+  }
+
+  async createOrder(order: Omit<Order, '_id' | 'createdAt' | 'status'>): Promise<Order> {
+    const res = await fetch(`${API_BASE}/api/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(order)
     });
+    if (!res.ok) throw new Error('Failed to create order');
+    const data = await res.json();
+    return { ...data, createdAt: new Date(data.createdAt) };
   }
 
   async updateOrderStatus(orderId: string, status: Order['status']): Promise<void> {
-      return new Promise((resolve) => {
-          this.orders = this.orders.map(order => 
-            order._id === orderId ? { ...order, status } : order
-          );
-          resolve();
-      });
+    const res = await fetch(`${API_BASE}/api/orders/${orderId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    if (!res.ok) throw new Error('Failed to update order status');
   }
 
-  // --- Banners ---
+  // =====================
+  // BANNERS
+  // =====================
   async getBanners(): Promise<MarketingBanner[]> {
-    return new Promise((resolve) => {
-        setTimeout(() => resolve([...this.banners]), 300);
-    });
+    try {
+      const res = await fetch(`${API_BASE}/api/banners`);
+      if (!res.ok) throw new Error('Failed to fetch banners');
+      return await res.json();
+    } catch (e) {
+      console.warn('Using fallback banners:', e);
+      return FALLBACK_BANNERS;
+    }
   }
 
   async createBanner(banner: Omit<MarketingBanner, '_id'>): Promise<MarketingBanner> {
-    return new Promise((resolve) => {
-        const newBanner = { ...banner, _id: Math.random().toString(36).substring(7) };
-        this.banners.push(newBanner);
-        resolve(newBanner);
+    const res = await fetch(`${API_BASE}/api/banners`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(banner)
     });
+    if (!res.ok) throw new Error('Failed to create banner');
+    return await res.json();
   }
 
   async updateBanner(id: string, updates: Partial<MarketingBanner>): Promise<MarketingBanner> {
-    return new Promise((resolve, reject) => {
-        const index = this.banners.findIndex(b => b._id === id);
-        if (index !== -1) {
-            this.banners[index] = { ...this.banners[index], ...updates };
-            resolve(this.banners[index]);
-        } else {
-            reject(new Error("Banner not found"));
-        }
+    const res = await fetch(`${API_BASE}/api/banners/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
     });
+    if (!res.ok) throw new Error('Failed to update banner');
+    return await res.json();
   }
 
   async deleteBanner(id: string): Promise<void> {
-      return new Promise((resolve) => {
-          this.banners = this.banners.filter(b => b._id !== id);
-          resolve();
-      });
+    const res = await fetch(`${API_BASE}/api/banners/${id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete banner');
   }
 }
 
-export const db = new MockDatabase();
+export const db = new Database();
