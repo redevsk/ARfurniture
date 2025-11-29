@@ -11,8 +11,7 @@ interface QRCodeModalProps {
 export const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, productId, productName }) => {
   if (!isOpen) return null;
 
-  // Generate URL - links to product page with AR launch flag
-  const baseUrl = window.location.origin;
+  const baseUrl = 'http://192.168.100.37:3000';
   const productUrl = productId 
     ? `${baseUrl}/#/product/${productId}?ar=true`
     : window.location.href;
