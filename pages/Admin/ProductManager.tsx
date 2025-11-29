@@ -1,11 +1,9 @@
 
 import React, { useEffect, useState, useRef } from 'react';
-import { Plus, Edit2, Trash2, X, Save, Upload, Box, AlertCircle, Link, FileUp, Image, PlusCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Save, Upload, Box, AlertCircle, Image, PlusCircle } from 'lucide-react';
 import { Product } from '../../types';
 import { db } from '../../services/db';
 import { CURRENCY } from '../../constants';
-
-type UploadMode = 'url' | 'file';
 
 // Detect if running on localhost (laptop) vs dev tunnel (phone)
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -14,8 +12,6 @@ const TUNNEL_URL = (import.meta as any).env?.VITE_AUTH_API_BASE?.replace(/\/$/, 
 // When on localhost: upload to localhost (fast, no size limits), save tunnel URL for mobile
 // When on phone/tunnel: must upload through tunnel (may hit size limits)
 const UPLOAD_BASE = isLocalhost ? 'http://localhost:4000' : TUNNEL_URL;
-const API_BASE = TUNNEL_URL;
-const SAVE_URL_BASE = TUNNEL_URL;
 
 export const ProductManager: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -24,10 +20,6 @@ export const ProductManager: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
-  
-  // Upload mode toggles
-  const [imageUploadMode, setImageUploadMode] = useState<UploadMode>('url');
-  const [modelUploadMode, setModelUploadMode] = useState<UploadMode>('url');
   
   // File refs
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -44,8 +36,6 @@ export const ProductManager: React.FC = () => {
   
   // Additional images state
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
-  const [newImageUrl, setNewImageUrl] = useState('');
-  const [additionalImageMode, setAdditionalImageMode] = useState<UploadMode>('url');
   const [uploadingAdditionalImage, setUploadingAdditionalImage] = useState(false);
   
   // Form State - ensure all values are always defined (never undefined) to prevent controlled/uncontrolled warnings
@@ -105,16 +95,12 @@ export const ProductManager: React.FC = () => {
       isNewArrival: product.isNewArrival || false
     });
     // Reset upload states
-    setImageUploadMode('url');
-    setModelUploadMode('url');
     setImageFile(null);
     setImagePreview(product.imageUrl || '');
     setModelFile(null);
     setModelFileName('');
     // Load additional images
     setAdditionalImages(product.images || []);
-    setNewImageUrl('');
-    setAdditionalImageMode('url');
     setIsModalOpen(true);
   };
 
@@ -136,16 +122,12 @@ export const ProductManager: React.FC = () => {
         isNewArrival: false
     });
     // Reset upload states
-    setImageUploadMode('url');
-    setModelUploadMode('url');
     setImageFile(null);
     setImagePreview('');
     setModelFile(null);
     setModelFileName('');
     // Reset additional images
     setAdditionalImages([]);
-    setNewImageUrl('');
-    setAdditionalImageMode('url');
     setIsModalOpen(true);
   };
 
@@ -218,13 +200,6 @@ export const ProductManager: React.FC = () => {
   };
 
   // Additional images handlers
-  const handleAddImageUrl = () => {
-    if (newImageUrl.trim()) {
-      setAdditionalImages(prev => [...prev, newImageUrl.trim()]);
-      setNewImageUrl('');
-    }
-  };
-
   const handleAdditionalImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -256,9 +231,8 @@ export const ProductManager: React.FC = () => {
     if (!formData.name.trim()) return "Product name is required";
     if (parseFloat(formData.price) < 0) return "Price cannot be negative";
     if (parseInt(formData.stock) < 0) return "Stock cannot be negative";
-    // Validate image
-    if (imageUploadMode === 'url' && !formData.imageUrl.trim()) return "Image URL is required";
-    if (imageUploadMode === 'file' && !imageFile && !editingId) return "Please select an image file";
+    // Validate image - require file upload if no existing image
+    if (!imageFile && !formData.imageUrl && !editingId) return "Please select an image file";
     return null;
   };
 
@@ -277,15 +251,15 @@ export const ProductManager: React.FC = () => {
         let finalImageUrl = formData.imageUrl;
         let finalModelUrl = formData.arModelUrl;
 
-        // Upload image file if in file mode
-        if (imageUploadMode === 'file' && imageFile) {
+        // Upload image file if selected
+        if (imageFile) {
           setUploadingImage(true);
           finalImageUrl = await uploadFile(imageFile, 'image', formData.name);
           setUploadingImage(false);
         }
 
-        // Upload model file if in file mode
-        if (modelUploadMode === 'file' && modelFile) {
+        // Upload model file if selected
+        if (modelFile) {
           setUploadingModel(true);
           finalModelUrl = await uploadFile(modelFile, 'model', formData.name);
           setUploadingModel(false);
@@ -346,7 +320,6 @@ export const ProductManager: React.FC = () => {
         setModelFileName('');
         // Reset additional images
         setAdditionalImages([]);
-        setNewImageUrl('');
     } catch (err) {
         setFormError("Failed to save product. Please try again.");
         setUploadingImage(false);
@@ -499,123 +472,44 @@ export const ProductManager: React.FC = () => {
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-1">Product Image *</label>
-                                    {/* Toggle buttons */}
-                                    <div className="flex gap-2 mb-2">
+                                    <div className="flex gap-2">
+                                        <input
+                                            ref={imageInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageFileChange}
+                                            className="hidden"
+                                        />
                                         <button
                                             type="button"
-                                            onClick={() => setImageUploadMode('url')}
-                                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                                                imageUploadMode === 'url' 
-                                                    ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' 
-                                                    : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
-                                            }`}
+                                            onClick={() => imageInputRef.current?.click()}
+                                            className="flex-1 px-4 py-2 rounded-lg border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 transition-colors text-left text-sm text-slate-600"
                                         >
-                                            <Link className="w-3.5 h-3.5" /> URL
+                                            {imageFile ? imageFile.name : (formData.imageUrl ? 'Image selected' : 'Click to select image...')}
                                         </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setImageUploadMode('file')}
-                                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                                                imageUploadMode === 'file' 
-                                                    ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' 
-                                                    : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
-                                            }`}
-                                        >
-                                            <FileUp className="w-3.5 h-3.5" /> Upload
-                                        </button>
+                                        <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 border border-slate-200 overflow-hidden">
+                                            {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover" alt="Preview" /> : <Upload className="w-4 h-4 text-slate-400" />}
+                                        </div>
                                     </div>
-                                    
-                                    {imageUploadMode === 'url' ? (
-                                        <div className="flex gap-2">
-                                            <input 
-                                                name="imageUrl" 
-                                                value={formData.imageUrl || ''} 
-                                                onChange={handleInputChange} 
-                                                className="flex-1 px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" 
-                                                placeholder="https://..." 
-                                            />
-                                            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 border border-slate-200 overflow-hidden">
-                                                {formData.imageUrl ? <img src={formData.imageUrl} className="w-full h-full object-cover" alt="Preview" /> : <Upload className="w-4 h-4 text-slate-400" />}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="flex gap-2">
-                                            <input
-                                                ref={imageInputRef}
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={handleImageFileChange}
-                                                className="hidden"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => imageInputRef.current?.click()}
-                                                className="flex-1 px-4 py-2 rounded-lg border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 transition-colors text-left text-sm text-slate-600"
-                                            >
-                                                {imageFile ? imageFile.name : 'Click to select image...'}
-                                            </button>
-                                            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 border border-slate-200 overflow-hidden">
-                                                {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover" alt="Preview" /> : <Upload className="w-4 h-4 text-slate-400" />}
-                                            </div>
-                                        </div>
-                                    )}
                                     {uploadingImage && <p className="text-xs text-indigo-600 mt-1">Uploading image...</p>}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-1">AR Model (.glb)</label>
-                                    {/* Toggle buttons */}
-                                    <div className="flex gap-2 mb-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => setModelUploadMode('url')}
-                                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                                                modelUploadMode === 'url' 
-                                                    ? 'bg-purple-100 text-purple-700 border border-purple-200' 
-                                                    : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
-                                            }`}
-                                        >
-                                            <Link className="w-3.5 h-3.5" /> URL
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setModelUploadMode('file')}
-                                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                                                modelUploadMode === 'file' 
-                                                    ? 'bg-purple-100 text-purple-700 border border-purple-200' 
-                                                    : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
-                                            }`}
-                                        >
-                                            <FileUp className="w-3.5 h-3.5" /> Upload
-                                        </button>
-                                    </div>
-                                    
-                                    {modelUploadMode === 'url' ? (
-                                        <input 
-                                            name="arModelUrl" 
-                                            value={formData.arModelUrl || ''} 
-                                            onChange={handleInputChange} 
-                                            className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" 
-                                            placeholder="https://.../model.glb" 
-                                        />
-                                    ) : (
-                                        <>
-                                            <input
-                                                ref={modelInputRef}
-                                                type="file"
-                                                accept=".glb"
-                                                onChange={handleModelFileChange}
-                                                className="hidden"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => modelInputRef.current?.click()}
-                                                className="w-full px-4 py-2 rounded-lg border border-dashed border-slate-300 hover:border-purple-400 hover:bg-purple-50 transition-colors text-left text-sm text-slate-600 flex items-center gap-2"
-                                            >
-                                                <Box className="w-4 h-4 text-purple-500" />
-                                                {modelFile ? modelFileName : 'Click to select .glb file...'}
-                                            </button>
-                                        </>
-                                    )}
+                                    <input
+                                        ref={modelInputRef}
+                                        type="file"
+                                        accept=".glb"
+                                        onChange={handleModelFileChange}
+                                        className="hidden"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => modelInputRef.current?.click()}
+                                        className="w-full px-4 py-2 rounded-lg border border-dashed border-slate-300 hover:border-purple-400 hover:bg-purple-50 transition-colors text-left text-sm text-slate-600 flex items-center gap-2"
+                                    >
+                                        <Box className="w-4 h-4 text-purple-500" />
+                                        {modelFile ? modelFileName : (formData.arModelUrl ? 'Model selected' : 'Click to select .glb file...')}
+                                    </button>
                                     {uploadingModel && <p className="text-xs text-purple-600 mt-1">Uploading model...</p>}
                                 </div>
 
@@ -643,76 +537,33 @@ export const ProductManager: React.FC = () => {
                                     <Image className="w-4 h-4 inline mr-1.5" />
                                     Additional Images ({additionalImages.length})
                                 </label>
-                                <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setAdditionalImageMode('url')}
-                                        className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors ${
-                                            additionalImageMode === 'url' 
-                                                ? 'bg-indigo-100 text-indigo-700' 
-                                                : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-                                        }`}
-                                    >
-                                        <Link className="w-3 h-3" /> URL
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setAdditionalImageMode('file')}
-                                        className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors ${
-                                            additionalImageMode === 'file' 
-                                                ? 'bg-indigo-100 text-indigo-700' 
-                                                : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-                                        }`}
-                                    >
-                                        <FileUp className="w-3 h-3" /> Upload
-                                    </button>
-                                </div>
                             </div>
                             
-                            {/* Add new image input */}
-                            {additionalImageMode === 'url' ? (
-                                <div className="flex gap-2 mb-3">
-                                    <input 
-                                        value={newImageUrl || ''}
-                                        onChange={(e) => setNewImageUrl(e.target.value)}
-                                        className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" 
-                                        placeholder="Enter image URL..." 
-                                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddImageUrl())}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={handleAddImageUrl}
-                                        className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                                    >
-                                        <PlusCircle className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="mb-3">
-                                    <input
-                                        ref={additionalImageInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleAdditionalImageFileChange}
-                                        className="hidden"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => additionalImageInputRef.current?.click()}
-                                        disabled={uploadingAdditionalImage}
-                                        className="w-full px-3 py-2 rounded-lg border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 transition-colors text-sm text-slate-600 flex items-center justify-center gap-2 disabled:opacity-50"
-                                    >
-                                        {uploadingAdditionalImage ? (
-                                            <>Uploading...</>
-                                        ) : (
-                                            <>
-                                                <PlusCircle className="w-4 h-4" />
-                                                Click to upload additional image
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            )}
+                            {/* Upload additional image */}
+                            <div className="mb-3">
+                                <input
+                                    ref={additionalImageInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleAdditionalImageFileChange}
+                                    className="hidden"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => additionalImageInputRef.current?.click()}
+                                    disabled={uploadingAdditionalImage}
+                                    className="w-full px-3 py-2 rounded-lg border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 transition-colors text-sm text-slate-600 flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {uploadingAdditionalImage ? (
+                                        <>Uploading...</>
+                                    ) : (
+                                        <>
+                                            <PlusCircle className="w-4 h-4" />
+                                            Click to upload additional image
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                             
                             {/* Image gallery */}
                             {additionalImages.length > 0 ? (
