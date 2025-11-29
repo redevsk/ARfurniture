@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowRight, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { Product, MarketingBanner } from '../../types';
 import { db } from '../../services/db';
-import { CURRENCY } from '../../constants';
+import { CURRENCY, resolveAssetUrl } from '../../constants';
 
 const ProductCard: React.FC<{ product: Product }> = ({ product }) => (
   <Link 
@@ -13,7 +13,7 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => (
   >
     <div className="aspect-square overflow-hidden bg-slate-100 relative">
       <img 
-        src={product.imageUrl} 
+        src={resolveAssetUrl(product.imageUrl)} 
         alt={product.name}
         className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
       />
@@ -64,7 +64,7 @@ const BannerCarousel: React.FC<{ banners: MarketingBanner[] }> = ({ banners }) =
                       )}
                       
                       <div className="md:w-1/2 relative h-48 md:h-full order-2 md:order-1">
-                          <img src={banner.imageUrl} alt={banner.title} className="w-full h-full object-cover" />
+                          <img src={resolveAssetUrl(banner.imageUrl)} alt={banner.title} className="w-full h-full object-cover" />
                       </div>
                       
                       <div className="md:w-1/2 p-6 md:p-10 flex flex-col justify-center items-start text-left bg-[#fdfbf7] order-1 md:order-2">

@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Box, Smartphone } from 'lucide-react';
 import { Product } from '../../types';
 import { db } from '../../services/db';
-import { CURRENCY } from '../../constants';
+import { CURRENCY, resolveAssetUrl } from '../../constants';
 
 export const ARViewer: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -86,8 +86,8 @@ export const ARViewer: React.FC = () => {
       {/* AR Model Viewer - Takes most of the screen */}
       <div className="flex-1 relative min-h-[60vh]">
         <ModelViewer
-          src={product.arModelUrl}
-          poster={product.imageUrl}
+          src={resolveAssetUrl(product.arModelUrl)}
+          poster={resolveAssetUrl(product.imageUrl)}
           alt={`3D model of ${product.name}`}
           shadow-intensity="1"
           camera-controls

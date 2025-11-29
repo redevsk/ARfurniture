@@ -1,9 +1,21 @@
 
-import React, { useEffect, useState } from 'react';
-import { Plus, Edit2, Trash2, X, Save, Upload, Box, AlertCircle } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Plus, Edit2, Trash2, X, Save, Upload, Box, AlertCircle, Link, FileUp, Image, PlusCircle } from 'lucide-react';
 import { Product } from '../../types';
 import { db } from '../../services/db';
 import { CURRENCY } from '../../constants';
+
+type UploadMode = 'url' | 'file';
+
+// Detect if running on localhost (laptop) vs dev tunnel (phone)
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const TUNNEL_URL = (import.meta as any).env?.VITE_AUTH_API_BASE?.replace(/\/$/, '') || 'http://localhost:4000';
+
+// When on localhost: upload to localhost (fast, no size limits), save tunnel URL for mobile
+// When on phone/tunnel: must upload through tunnel (may hit size limits)
+const UPLOAD_BASE = isLocalhost ? 'http://localhost:4000' : TUNNEL_URL;
+const API_BASE = TUNNEL_URL;
+const SAVE_URL_BASE = TUNNEL_URL;
 
 export const ProductManager: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -13,7 +25,30 @@ export const ProductManager: React.FC = () => {
   const [formError, setFormError] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  // Form State
+  // Upload mode toggles
+  const [imageUploadMode, setImageUploadMode] = useState<UploadMode>('url');
+  const [modelUploadMode, setModelUploadMode] = useState<UploadMode>('url');
+  
+  // File refs
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const modelInputRef = useRef<HTMLInputElement>(null);
+  const additionalImageInputRef = useRef<HTMLInputElement>(null);
+  
+  // Upload states
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [modelFile, setModelFile] = useState<File | null>(null);
+  const [modelFileName, setModelFileName] = useState<string>('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingModel, setUploadingModel] = useState(false);
+  
+  // Additional images state
+  const [additionalImages, setAdditionalImages] = useState<string[]>([]);
+  const [newImageUrl, setNewImageUrl] = useState('');
+  const [additionalImageMode, setAdditionalImageMode] = useState<UploadMode>('url');
+  const [uploadingAdditionalImage, setUploadingAdditionalImage] = useState(false);
+  
+  // Form State - ensure all values are always defined (never undefined) to prevent controlled/uncontrolled warnings
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -29,6 +64,12 @@ export const ProductManager: React.FC = () => {
     isFeatured: false,
     isNewArrival: false
   });
+
+  // Helper to ensure input values are never undefined
+  const safeValue = (value: string | number | boolean | undefined | null): string => {
+    if (value === undefined || value === null) return '';
+    return String(value);
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -49,20 +90,31 @@ export const ProductManager: React.FC = () => {
   const handleEdit = (product: Product) => {
     setEditingId(product._id);
     setFormData({
-      name: product.name,
-      description: product.description,
-      price: product.price.toString(),
-      stock: product.stock.toString(),
-      category: product.category,
-      imageUrl: product.imageUrl,
-      arModelUrl: product.arModelUrl,
-      width: product.dimensions.width.toString(),
-      height: product.dimensions.height.toString(),
-      depth: product.dimensions.depth.toString(),
-      unit: product.dimensions.unit,
+      name: product.name || '',
+      description: product.description || '',
+      price: product.price?.toString() || '',
+      stock: product.stock?.toString() || '',
+      category: product.category || 'Chairs',
+      imageUrl: product.imageUrl || '',
+      arModelUrl: product.arModelUrl || '',
+      width: product.dimensions?.width?.toString() || '',
+      height: product.dimensions?.height?.toString() || '',
+      depth: product.dimensions?.depth?.toString() || '',
+      unit: product.dimensions?.unit || 'cm',
       isFeatured: product.isFeatured || false,
       isNewArrival: product.isNewArrival || false
     });
+    // Reset upload states
+    setImageUploadMode('url');
+    setModelUploadMode('url');
+    setImageFile(null);
+    setImagePreview(product.imageUrl || '');
+    setModelFile(null);
+    setModelFileName('');
+    // Load additional images
+    setAdditionalImages(product.images || []);
+    setNewImageUrl('');
+    setAdditionalImageMode('url');
     setIsModalOpen(true);
   };
 
@@ -83,6 +135,17 @@ export const ProductManager: React.FC = () => {
         isFeatured: false,
         isNewArrival: false
     });
+    // Reset upload states
+    setImageUploadMode('url');
+    setModelUploadMode('url');
+    setImageFile(null);
+    setImagePreview('');
+    setModelFile(null);
+    setModelFileName('');
+    // Reset additional images
+    setAdditionalImages([]);
+    setNewImageUrl('');
+    setAdditionalImageMode('url');
     setIsModalOpen(true);
   };
 
@@ -97,11 +160,105 @@ export const ProductManager: React.FC = () => {
     if (formError) setFormError(''); 
   };
 
+  // Handle image file selection
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setFormError('Please select a valid image file');
+        return;
+      }
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview((e.target?.result as string) || '');
+      };
+      reader.readAsDataURL(file);
+      if (formError) setFormError('');
+    }
+  };
+
+  // Handle model file selection
+  const handleModelFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.name.toLowerCase().endsWith('.glb')) {
+        setFormError('Please select a valid .glb file');
+        return;
+      }
+      setModelFile(file);
+      setModelFileName(file.name);
+      if (formError) setFormError('');
+    }
+  };
+
+  // Upload file to server using FormData (actual file upload, not base64)
+  // Files are organized into product-specific folders
+  // Save as RELATIVE URL so it works from any host (localhost, LAN IP, or tunnel)
+  const uploadFile = async (file: File, type: 'image' | 'model', productName?: string): Promise<string> => {
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', file);
+    
+    // Pass productName as query param (multer reads body AFTER file upload, so body fields aren't available in destination)
+    const folderName = encodeURIComponent(productName || 'uncategorized');
+    
+    // Upload to appropriate server based on where we're running
+    const response = await fetch(`${UPLOAD_BASE}/api/upload/${type}?productName=${folderName}`, {
+      method: 'POST',
+      body: formDataUpload  // No Content-Type header - browser sets it automatically with boundary
+    });
+    
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+    
+    const result = await response.json();
+    // Return RELATIVE path - will work from any host (localhost, LAN IP, tunnel)
+    return result.url;
+  };
+
+  // Additional images handlers
+  const handleAddImageUrl = () => {
+    if (newImageUrl.trim()) {
+      setAdditionalImages(prev => [...prev, newImageUrl.trim()]);
+      setNewImageUrl('');
+    }
+  };
+
+  const handleAdditionalImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setFormError('Please select a valid image file');
+        return;
+      }
+      try {
+        setUploadingAdditionalImage(true);
+        const uploadedUrl = await uploadFile(file, 'image', formData.name);
+        setAdditionalImages(prev => [...prev, uploadedUrl]);
+      } catch (err) {
+        setFormError('Failed to upload additional image');
+      } finally {
+        setUploadingAdditionalImage(false);
+        // Reset the input
+        if (additionalImageInputRef.current) {
+          additionalImageInputRef.current.value = '';
+        }
+      }
+    }
+  };
+
+  const handleRemoveAdditionalImage = (index: number) => {
+    setAdditionalImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const validateForm = () => {
     if (!formData.name.trim()) return "Product name is required";
     if (parseFloat(formData.price) < 0) return "Price cannot be negative";
     if (parseInt(formData.stock) < 0) return "Stock cannot be negative";
-    if (!formData.imageUrl.trim()) return "Image URL is required";
+    // Validate image
+    if (imageUploadMode === 'url' && !formData.imageUrl.trim()) return "Image URL is required";
+    if (imageUploadMode === 'file' && !imageFile && !editingId) return "Please select an image file";
     return null;
   };
 
@@ -117,14 +274,32 @@ export const ProductManager: React.FC = () => {
     setIsSubmitting(true);
     
     try {
+        let finalImageUrl = formData.imageUrl;
+        let finalModelUrl = formData.arModelUrl;
+
+        // Upload image file if in file mode
+        if (imageUploadMode === 'file' && imageFile) {
+          setUploadingImage(true);
+          finalImageUrl = await uploadFile(imageFile, 'image', formData.name);
+          setUploadingImage(false);
+        }
+
+        // Upload model file if in file mode
+        if (modelUploadMode === 'file' && modelFile) {
+          setUploadingModel(true);
+          finalModelUrl = await uploadFile(modelFile, 'model', formData.name);
+          setUploadingModel(false);
+        }
+
         const productData = {
             name: formData.name,
             description: formData.description,
             price: parseFloat(formData.price) || 0,
             stock: parseInt(formData.stock) || 0,
             category: formData.category,
-            imageUrl: formData.imageUrl,
-            arModelUrl: formData.arModelUrl,
+            imageUrl: finalImageUrl,
+            images: additionalImages,
+            arModelUrl: finalModelUrl,
             dimensions: {
                 width: parseFloat(formData.width) || 0,
                 height: parseFloat(formData.height) || 0,
@@ -164,8 +339,18 @@ export const ProductManager: React.FC = () => {
           isFeatured: false,
           isNewArrival: false
         });
+        // Reset upload states
+        setImageFile(null);
+        setImagePreview('');
+        setModelFile(null);
+        setModelFileName('');
+        // Reset additional images
+        setAdditionalImages([]);
+        setNewImageUrl('');
     } catch (err) {
         setFormError("Failed to save product. Please try again.");
+        setUploadingImage(false);
+        setUploadingModel(false);
     } finally {
         setIsSubmitting(false);
     }
@@ -286,11 +471,11 @@ export const ProductManager: React.FC = () => {
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-1">Product Name *</label>
-                                    <input name="name" required value={formData.name} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" placeholder="e.g. Modern Sofa" />
+                                    <input name="name" required value={formData.name || ''} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" placeholder="e.g. Modern Sofa" />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-1">Category</label>
-                                    <select name="category" value={formData.category} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                    <select name="category" value={formData.category || 'Chairs'} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
                                         <option value="Chairs">Chairs</option>
                                         <option value="Sofas">Sofas</option>
                                         <option value="Tables">Tables</option>
@@ -302,28 +487,136 @@ export const ProductManager: React.FC = () => {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-1">Price ({CURRENCY}) *</label>
-                                        <input type="number" step="0.01" min="0" name="price" required value={formData.price} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0.00" />
+                                        <input type="number" step="0.01" min="0" name="price" required value={formData.price || ''} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0.00" />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-1">Stock *</label>
-                                        <input type="number" min="0" name="stock" required value={formData.stock} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0" />
+                                        <input type="number" min="0" name="stock" required value={formData.stock || ''} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0" />
                                     </div>
                                 </div>
                             </div>
                             
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-1">Image URL *</label>
-                                    <div className="flex gap-2">
-                                        <input name="imageUrl" required value={formData.imageUrl} onChange={handleInputChange} className="flex-1 px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="https://..." />
-                                        <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 border border-slate-200 overflow-hidden">
-                                            {formData.imageUrl ? <img src={formData.imageUrl} className="w-full h-full object-cover" alt="Preview" /> : <Upload className="w-4 h-4 text-slate-400" />}
-                                        </div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1">Product Image *</label>
+                                    {/* Toggle buttons */}
+                                    <div className="flex gap-2 mb-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setImageUploadMode('url')}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                                                imageUploadMode === 'url' 
+                                                    ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' 
+                                                    : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                                            }`}
+                                        >
+                                            <Link className="w-3.5 h-3.5" /> URL
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setImageUploadMode('file')}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                                                imageUploadMode === 'file' 
+                                                    ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' 
+                                                    : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                                            }`}
+                                        >
+                                            <FileUp className="w-3.5 h-3.5" /> Upload
+                                        </button>
                                     </div>
+                                    
+                                    {imageUploadMode === 'url' ? (
+                                        <div className="flex gap-2">
+                                            <input 
+                                                name="imageUrl" 
+                                                value={formData.imageUrl || ''} 
+                                                onChange={handleInputChange} 
+                                                className="flex-1 px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" 
+                                                placeholder="https://..." 
+                                            />
+                                            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 border border-slate-200 overflow-hidden">
+                                                {formData.imageUrl ? <img src={formData.imageUrl} className="w-full h-full object-cover" alt="Preview" /> : <Upload className="w-4 h-4 text-slate-400" />}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-2">
+                                            <input
+                                                ref={imageInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleImageFileChange}
+                                                className="hidden"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => imageInputRef.current?.click()}
+                                                className="flex-1 px-4 py-2 rounded-lg border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 transition-colors text-left text-sm text-slate-600"
+                                            >
+                                                {imageFile ? imageFile.name : 'Click to select image...'}
+                                            </button>
+                                            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 border border-slate-200 overflow-hidden">
+                                                {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover" alt="Preview" /> : <Upload className="w-4 h-4 text-slate-400" />}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {uploadingImage && <p className="text-xs text-indigo-600 mt-1">Uploading image...</p>}
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-1">AR Model URL (.glb)</label>
-                                    <input name="arModelUrl" value={formData.arModelUrl} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="https://.../model.glb" />
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1">AR Model (.glb)</label>
+                                    {/* Toggle buttons */}
+                                    <div className="flex gap-2 mb-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setModelUploadMode('url')}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                                                modelUploadMode === 'url' 
+                                                    ? 'bg-purple-100 text-purple-700 border border-purple-200' 
+                                                    : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                                            }`}
+                                        >
+                                            <Link className="w-3.5 h-3.5" /> URL
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setModelUploadMode('file')}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                                                modelUploadMode === 'file' 
+                                                    ? 'bg-purple-100 text-purple-700 border border-purple-200' 
+                                                    : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                                            }`}
+                                        >
+                                            <FileUp className="w-3.5 h-3.5" /> Upload
+                                        </button>
+                                    </div>
+                                    
+                                    {modelUploadMode === 'url' ? (
+                                        <input 
+                                            name="arModelUrl" 
+                                            value={formData.arModelUrl || ''} 
+                                            onChange={handleInputChange} 
+                                            className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" 
+                                            placeholder="https://.../model.glb" 
+                                        />
+                                    ) : (
+                                        <>
+                                            <input
+                                                ref={modelInputRef}
+                                                type="file"
+                                                accept=".glb"
+                                                onChange={handleModelFileChange}
+                                                className="hidden"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => modelInputRef.current?.click()}
+                                                className="w-full px-4 py-2 rounded-lg border border-dashed border-slate-300 hover:border-purple-400 hover:bg-purple-50 transition-colors text-left text-sm text-slate-600 flex items-center gap-2"
+                                            >
+                                                <Box className="w-4 h-4 text-purple-500" />
+                                                {modelFile ? modelFileName : 'Click to select .glb file...'}
+                                            </button>
+                                        </>
+                                    )}
+                                    {uploadingModel && <p className="text-xs text-purple-600 mt-1">Uploading model...</p>}
                                 </div>
 
                                 {/* Tags Section */}
@@ -343,9 +636,110 @@ export const ProductManager: React.FC = () => {
                             </div>
                         </div>
 
+                        {/* Additional Images Section */}
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                            <div className="flex items-center justify-between mb-3">
+                                <label className="block text-sm font-semibold text-slate-900">
+                                    <Image className="w-4 h-4 inline mr-1.5" />
+                                    Additional Images ({additionalImages.length})
+                                </label>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAdditionalImageMode('url')}
+                                        className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors ${
+                                            additionalImageMode === 'url' 
+                                                ? 'bg-indigo-100 text-indigo-700' 
+                                                : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                                        }`}
+                                    >
+                                        <Link className="w-3 h-3" /> URL
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAdditionalImageMode('file')}
+                                        className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors ${
+                                            additionalImageMode === 'file' 
+                                                ? 'bg-indigo-100 text-indigo-700' 
+                                                : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                                        }`}
+                                    >
+                                        <FileUp className="w-3 h-3" /> Upload
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            {/* Add new image input */}
+                            {additionalImageMode === 'url' ? (
+                                <div className="flex gap-2 mb-3">
+                                    <input 
+                                        value={newImageUrl || ''}
+                                        onChange={(e) => setNewImageUrl(e.target.value)}
+                                        className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" 
+                                        placeholder="Enter image URL..." 
+                                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddImageUrl())}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleAddImageUrl}
+                                        className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                                    >
+                                        <PlusCircle className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="mb-3">
+                                    <input
+                                        ref={additionalImageInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleAdditionalImageFileChange}
+                                        className="hidden"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => additionalImageInputRef.current?.click()}
+                                        disabled={uploadingAdditionalImage}
+                                        className="w-full px-3 py-2 rounded-lg border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 transition-colors text-sm text-slate-600 flex items-center justify-center gap-2 disabled:opacity-50"
+                                    >
+                                        {uploadingAdditionalImage ? (
+                                            <>Uploading...</>
+                                        ) : (
+                                            <>
+                                                <PlusCircle className="w-4 h-4" />
+                                                Click to upload additional image
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            )}
+                            
+                            {/* Image gallery */}
+                            {additionalImages.length > 0 ? (
+                                <div className="grid grid-cols-4 gap-2">
+                                    {additionalImages.map((img, index) => (
+                                        <div key={index} className="relative group">
+                                            <div className="aspect-square rounded-lg overflow-hidden border border-slate-200 bg-white">
+                                                <img src={img} alt={`Additional ${index + 1}`} className="w-full h-full object-cover" />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveAdditionalImage(index)}
+                                                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-slate-400 text-center py-2">No additional images added</p>
+                            )}
+                        </div>
+
                         <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-1">Description</label>
-                            <textarea name="description" rows={3} value={formData.description} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="Product details..." />
+                            <textarea name="description" rows={3} value={formData.description || ''} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="Product details..." />
                         </div>
 
                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
@@ -353,19 +747,19 @@ export const ProductManager: React.FC = () => {
                             <div className="grid grid-cols-4 gap-3">
                                 <div>
                                     <span className="text-xs text-slate-500 mb-1 block">Width</span>
-                                    <input type="number" name="width" value={formData.width} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500" placeholder="W" />
+                                    <input type="number" name="width" value={formData.width || ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500" placeholder="W" />
                                 </div>
                                 <div>
                                     <span className="text-xs text-slate-500 mb-1 block">Height</span>
-                                    <input type="number" name="height" value={formData.height} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500" placeholder="H" />
+                                    <input type="number" name="height" value={formData.height || ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500" placeholder="H" />
                                 </div>
                                 <div>
                                     <span className="text-xs text-slate-500 mb-1 block">Depth</span>
-                                    <input type="number" name="depth" value={formData.depth} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500" placeholder="D" />
+                                    <input type="number" name="depth" value={formData.depth || ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500" placeholder="D" />
                                 </div>
                                 <div>
                                     <span className="text-xs text-slate-500 mb-1 block">Unit</span>
-                                    <select name="unit" value={formData.unit} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500 bg-white">
+                                    <select name="unit" value={formData.unit || 'cm'} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500 bg-white">
                                         <option value="cm">cm</option>
                                         <option value="in">in</option>
                                     </select>

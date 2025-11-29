@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Trash2, ArrowRight, CreditCard, MapPin, Plus, Check, X, Phone, User, Home, CheckCircle } from 'lucide-react';
 import { useCart, useAuth } from '../../App';
 import { Address } from '../../types';
-import { CURRENCY } from '../../constants';
+import { CURRENCY, resolveAssetUrl } from '../../constants';
 import { db } from '../../services/db';
 
 interface CheckoutForm {
@@ -172,7 +172,7 @@ export const Cart: React.FC = () => {
                     />
                 </div>
                 <div className="w-24 h-24 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
-                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                    <img src={resolveAssetUrl(item.imageUrl)} alt={item.name} className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-grow flex flex-col justify-between">
                     <div className="flex justify-between items-start">

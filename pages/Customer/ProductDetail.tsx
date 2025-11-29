@@ -8,7 +8,7 @@ import { askProductAssistant } from '../../services/gemini';
 import { useCart } from '../../App';
 import { ModelViewerWrapper } from '../../components/ModelViewerWrapper';
 import { QRCodeModal } from '../../components/QRCodeModal';
-import { CURRENCY } from '../../constants';
+import { CURRENCY, resolveAssetUrl } from '../../constants';
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -122,10 +122,10 @@ export const ProductDetail: React.FC = () => {
     return <div className="min-h-screen flex items-center justify-center text-slate-500">Loading...</div>;
   }
 
-  // Handle multiple images
+  // Handle multiple images - resolve URLs for current host
   const galleryImages = product.images && product.images.length > 0 
-    ? product.images 
-    : [product.imageUrl];
+    ? product.images.map(img => resolveAssetUrl(img)) 
+    : [resolveAssetUrl(product.imageUrl)];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
@@ -135,7 +135,7 @@ export const ProductDetail: React.FC = () => {
           <div className="text-center max-w-sm">
             {/* Product preview */}
             <div className="w-32 h-32 mx-auto mb-6 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
-              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+              <img src={resolveAssetUrl(product.imageUrl)} alt={product.name} className="w-full h-full object-cover" />
             </div>
             
             <h1 className="text-2xl font-bold text-white mb-2">{product.name}</h1>
@@ -185,7 +185,7 @@ export const ProductDetail: React.FC = () => {
               {viewMode === '3d' ? (
                 <div className="w-full h-full animate-in fade-in duration-500">
                     <ModelViewerWrapper 
-                        src={product.arModelUrl}
+                        src={resolveAssetUrl(product.arModelUrl)}
                         poster={activeImage}
                         alt={`3D model of ${product.name}`}
                     />
@@ -372,7 +372,7 @@ export const ProductDetail: React.FC = () => {
                 >
                   <div className="aspect-square overflow-hidden bg-slate-100 relative">
                     <img 
-                      src={rp.imageUrl} 
+                      src={resolveAssetUrl(rp.imageUrl)} 
                       alt={rp.name}
                       className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                     />

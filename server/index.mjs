@@ -4,6 +4,12 @@ import dotenv from 'dotenv'
 import { MongoClient } from 'mongodb'
 import bcrypt from 'bcryptjs'
 import path from 'path'
+import fs from 'fs'
+import { fileURLToPath } from 'url'
+import multer from 'multer'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 dotenv.config()
 if (!process.env.MONGODB_URI) {
@@ -34,8 +40,27 @@ const normalizeAdmin = (doc = {}) => ({
 })
 
 const app = express()
-app.use(cors())
-app.use(express.json())
+
+// Manual CORS middleware - required for dev tunnels which strip headers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+  res.header('Access-Control-Allow-Credentials', 'true')
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200)
+  }
+  next()
+})
+
+app.use(express.json({ limit: '200mb' }))
+app.use(express.urlencoded({ extended: true, limit: '200mb' }))
+
+// Serve static files from products folder
+const productsPath = path.join(__dirname, '..', 'products')
+app.use('/products', express.static(productsPath))
 
 const uri = process.env.MONGODB_URI
 if (!uri) {
@@ -229,6 +254,107 @@ app.delete('/api/products/:id', async (req, res) => {
   } catch (e) {
     console.error('Delete product error:', e)
     return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// =====================
+// FILE UPLOAD API
+// =====================
+
+// Helper to sanitize folder names
+const sanitizeFolderName = (name) => {
+  if (!name) return 'uncategorized'
+  return name.toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with hyphens
+    .replace(/^-+|-+$/g, '')      // Remove leading/trailing hyphens
+    .substring(0, 50)             // Limit length
+    || 'uncategorized'
+}
+
+// Configure multer for file storage with dynamic product folders
+const imageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const productFolder = sanitizeFolderName(req.body.productName || req.query.productName)
+    const dir = path.join(__dirname, '..', 'products', 'images', productFolder)
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+    req.productFolder = productFolder  // Store for later use
+    cb(null, dir)
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg'
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`
+    cb(null, uniqueName)
+  }
+})
+
+const modelStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const productFolder = sanitizeFolderName(req.body.productName || req.query.productName)
+    const dir = path.join(__dirname, '..', 'products', '3dmodels', productFolder)
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+    req.productFolder = productFolder  // Store for later use
+    cb(null, dir)
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.glb'
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`
+    cb(null, uniqueName)
+  }
+})
+
+const uploadImage = multer({ 
+  storage: imageStorage,
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true)
+    } else {
+      cb(new Error('Only image files are allowed'))
+    }
+  }
+})
+
+const uploadModel = multer({ 
+  storage: modelStorage,
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB limit for 3D models
+  fileFilter: (req, file, cb) => {
+    if (file.originalname.toLowerCase().endsWith('.glb')) {
+      cb(null, true)
+    } else {
+      cb(new Error('Only .glb files are allowed'))
+    }
+  }
+})
+
+// Upload image endpoint
+app.post('/api/upload/image', uploadImage.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' })
+    }
+    const productFolder = req.productFolder || 'uncategorized'
+    const url = `/products/images/${productFolder}/${req.file.filename}`
+    console.log('✓ Image uploaded:', url)
+    return res.json({ url })
+  } catch (e) {
+    console.error('Image upload error:', e)
+    return res.status(500).json({ error: 'Upload failed' })
+  }
+})
+
+// Upload GLB model endpoint
+app.post('/api/upload/model', uploadModel.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' })
+    }
+    const productFolder = req.productFolder || 'uncategorized'
+    const url = `/products/3dmodels/${productFolder}/${req.file.filename}`
+    console.log('✓ Model uploaded:', url)
+    return res.json({ url })
+  } catch (e) {
+    console.error('Model upload error:', e)
+    return res.status(500).json({ error: 'Upload failed' })
   }
 })
 
