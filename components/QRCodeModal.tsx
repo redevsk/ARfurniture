@@ -11,7 +11,7 @@ interface QRCodeModalProps {
 export const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, productId, productName }) => {
   if (!isOpen) return null;
 
-  const baseUrl = 'http://192.168.100.37:3000';
+  const baseUrl = `${window.location.protocol}//${window.location.host}`;
   const productUrl = productId 
     ? `${baseUrl}/#/product/${productId}?ar=true`
     : window.location.href;
