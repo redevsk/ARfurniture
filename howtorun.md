@@ -16,14 +16,7 @@ npm install
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `VITE_AUTH_API_BASE` | Backend API URL (use your LAN IP for mobile testing) | `http://192.168.100.37:4000` |
-
-### 2. QR Code Base URL
-
-Edit `components/QRCodeModal.tsx`:
-```tsx
-const baseUrl = 'http://[your-ip-address]:3000';
-```
+| `VITE_AUTH_API_BASE` | Backend API URL (use your LAN IP for mobile testing) | `http://[your-ip]:4000` |
 
 ## Running the App
 
@@ -39,9 +32,11 @@ npm run dev
 
 ## Accessing the App
 
+**Important:** Always use your LAN IP address (not `localhost`) when accessing the app, so that the QR code works correctly for mobile AR viewing.
+
 | Device | Frontend URL | Backend URL |
 |--------|--------------|-------------|
-| **Localhost** | `http://localhost:3000` | `http://localhost:4000` |
+| **Desktop** | `http://[your-ip]:3000` | `http://[your-ip]:4000` |
 | **LAN (Phone)** | `http://[your-ip]:3000` | `http://[your-ip]:4000` |
 
 ### Find Your LAN IP
@@ -64,4 +59,3 @@ Uploaded images and 3D models are stored in:
 | Issue | Solution |
 |-------|----------|
 | Images not loading on phone | Make sure `VITE_AUTH_API_BASE` uses your LAN IP, not `localhost` |
-| QR code not working | Update `baseUrl` in `QRCodeModal.tsx` to your LAN IP |
