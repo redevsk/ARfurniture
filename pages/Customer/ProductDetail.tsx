@@ -48,7 +48,7 @@ export const ProductDetail: React.FC = () => {
         setProduct(currentProduct);
 
         if (currentProduct) {
-            setActiveImage(currentProduct.imageUrl);
+            setActiveImage(resolveAssetUrl(currentProduct.imageUrl));
             
             // Filter related products: Same category, exclude current
             const related = allProducts
