@@ -4,6 +4,12 @@ import dotenv from 'dotenv'
 import { MongoClient } from 'mongodb'
 import bcrypt from 'bcryptjs'
 import path from 'path'
+import fs from 'fs'
+import { fileURLToPath } from 'url'
+import multer from 'multer'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 dotenv.config()
 if (!process.env.MONGODB_URI) {
@@ -34,8 +40,27 @@ const normalizeAdmin = (doc = {}) => ({
 })
 
 const app = express()
-app.use(cors())
-app.use(express.json())
+
+// Manual CORS middleware - required for dev tunnels which strip headers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+  res.header('Access-Control-Allow-Credentials', 'true')
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200)
+  }
+  next()
+})
+
+app.use(express.json({ limit: '200mb' }))
+app.use(express.urlencoded({ extended: true, limit: '200mb' }))
+
+// Serve static files from products folder
+const productsPath = path.join(__dirname, '..', 'products')
+app.use('/products', express.static(productsPath))
 
 const uri = process.env.MONGODB_URI
 if (!uri) {
@@ -48,6 +73,9 @@ await client.connect()
 const db = client.db('arecommerce')
 const users = db.collection('users')
 const admins = db.collection('admins')
+const products = db.collection('products')
+const orders = db.collection('orders')
+const banners = db.collection('banners')
 
 console.log('✓ Connected to MongoDB')
 
@@ -146,6 +174,435 @@ app.post('/api/admins/login', async (req, res) => {
 const port = process.env.PORT || 4000
 app.listen(port, () => {
   console.log(`✓ Auth server listening on http://localhost:${port}`)
+})
+
+// =====================
+// PRODUCTS API
+// =====================
+
+// Get all products
+app.get('/api/products', async (req, res) => {
+  try {
+    const allProducts = await products.find({}).toArray()
+    const normalized = allProducts.map(p => ({
+      ...p,
+      _id: p._id.toString(),
+      createdAt: p.createdAt ? new Date(p.createdAt) : new Date()
+    }))
+    return res.json(normalized)
+  } catch (e) {
+    console.error('Get products error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Get product by ID
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    const { ObjectId } = await import('mongodb')
+    const product = await products.findOne({ _id: new ObjectId(req.params.id) })
+    if (!product) return res.status(404).json({ error: 'Product not found' })
+    return res.json({
+      ...product,
+      _id: product._id.toString(),
+      createdAt: product.createdAt ? new Date(product.createdAt) : new Date()
+    })
+  } catch (e) {
+    console.error('Get product error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Create product
+app.post('/api/products', async (req, res) => {
+  try {
+    const productData = {
+      ...req.body,
+      createdAt: new Date()
+    }
+    const result = await products.insertOne(productData)
+    return res.json({ ...productData, _id: result.insertedId.toString() })
+  } catch (e) {
+    console.error('Create product error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Update product
+app.put('/api/products/:id', async (req, res) => {
+  try {
+    const { ObjectId } = await import('mongodb')
+    const { _id, ...updates } = req.body
+    await products.updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: updates }
+    )
+    const updated = await products.findOne({ _id: new ObjectId(req.params.id) })
+    return res.json({ ...updated, _id: updated._id.toString() })
+  } catch (e) {
+    console.error('Update product error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Helper to delete an entire folder recursively
+const deleteProductFolders = (productName) => {
+  if (!productName) return
+  const folderName = productName.toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 50)
+    || 'uncategorized'
+  
+  const imageFolderPath = path.join(__dirname, '..', 'products', 'images', folderName)
+  const modelFolderPath = path.join(__dirname, '..', 'products', '3dmodels', folderName)
+  
+  // Delete image folder (includes gallery subfolder)
+  if (fs.existsSync(imageFolderPath)) {
+    fs.rmSync(imageFolderPath, { recursive: true, force: true })
+    console.log('✓ Deleted image folder:', imageFolderPath)
+  }
+  
+  // Delete model folder
+  if (fs.existsSync(modelFolderPath)) {
+    fs.rmSync(modelFolderPath, { recursive: true, force: true })
+    console.log('✓ Deleted model folder:', modelFolderPath)
+  }
+}
+
+// Delete product
+app.delete('/api/products/:id', async (req, res) => {
+  try {
+    const { ObjectId } = await import('mongodb')
+    
+    // First, get the product to know its name (for folder deletion)
+    const product = await products.findOne({ _id: new ObjectId(req.params.id) })
+    
+    // Delete from database
+    await products.deleteOne({ _id: new ObjectId(req.params.id) })
+    
+    // Delete product folders (images and 3dmodels)
+    if (product && product.name) {
+      deleteProductFolders(product.name)
+    }
+    
+    return res.json({ success: true })
+  } catch (e) {
+    console.error('Delete product error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// =====================
+// FILE UPLOAD API
+// =====================
+
+// Helper to sanitize folder names
+const sanitizeFolderName = (name) => {
+  if (!name) return 'uncategorized'
+  return name.toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with hyphens
+    .replace(/^-+|-+$/g, '')      // Remove leading/trailing hyphens
+    .substring(0, 50)             // Limit length
+    || 'uncategorized'
+}
+
+// Configure multer for main image storage (1 per product)
+const imageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const productFolder = sanitizeFolderName(req.body.productName || req.query.productName)
+    const dir = path.join(__dirname, '..', 'products', 'images', productFolder)
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+    req.productFolder = productFolder
+    cb(null, dir)
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg'
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`
+    cb(null, uniqueName)
+  }
+})
+
+// Configure multer for additional images (multiple per product)
+const additionalImageStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const productFolder = sanitizeFolderName(req.body.productName || req.query.productName)
+    const dir = path.join(__dirname, '..', 'products', 'images', productFolder, 'gallery')
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+    req.productFolder = productFolder
+    cb(null, dir)
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg'
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`
+    cb(null, uniqueName)
+  }
+})
+
+const modelStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const productFolder = sanitizeFolderName(req.body.productName || req.query.productName)
+    const dir = path.join(__dirname, '..', 'products', '3dmodels', productFolder)
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+    req.productFolder = productFolder  // Store for later use
+    cb(null, dir)
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.glb'
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`
+    cb(null, uniqueName)
+  }
+})
+
+const uploadImage = multer({ 
+  storage: imageStorage,
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true)
+    } else {
+      cb(new Error('Only image files are allowed'))
+    }
+  }
+})
+
+const uploadAdditionalImage = multer({ 
+  storage: additionalImageStorage,
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true)
+    } else {
+      cb(new Error('Only image files are allowed'))
+    }
+  }
+})
+
+const uploadModel = multer({ 
+  storage: modelStorage,
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB limit for 3D models
+  fileFilter: (req, file, cb) => {
+    if (file.originalname.toLowerCase().endsWith('.glb')) {
+      cb(null, true)
+    } else {
+      cb(new Error('Only .glb files are allowed'))
+    }
+  }
+})
+
+// Helper to delete all files in a folder (except the one being uploaded)
+const clearProductFolder = (folderPath, keepFilename) => {
+  try {
+    if (!fs.existsSync(folderPath)) return
+    const files = fs.readdirSync(folderPath)
+    for (const file of files) {
+      if (file !== keepFilename) {
+        const filePath = path.join(folderPath, file)
+        fs.unlinkSync(filePath)
+        console.log('✓ Deleted old file:', filePath)
+      }
+    }
+  } catch (e) {
+    console.error('Failed to clear folder:', e)
+  }
+}
+
+// Upload image endpoint
+app.post('/api/upload/image', uploadImage.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' })
+    }
+    
+    const productFolder = req.productFolder || 'uncategorized'
+    const folderPath = path.join(__dirname, '..', 'products', 'images', productFolder)
+    
+    // Delete all other files in this product's image folder
+    clearProductFolder(folderPath, req.file.filename)
+    
+    const url = `/products/images/${productFolder}/${req.file.filename}`
+    console.log('✓ Image uploaded:', url)
+    return res.json({ url })
+  } catch (e) {
+    console.error('Image upload error:', e)
+    return res.status(500).json({ error: 'Upload failed' })
+  }
+})
+
+// Upload additional image endpoint (goes to gallery subfolder, no auto-delete)
+app.post('/api/upload/additional-image', uploadAdditionalImage.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' })
+    }
+    
+    const productFolder = req.productFolder || 'uncategorized'
+    const url = `/products/images/${productFolder}/gallery/${req.file.filename}`
+    console.log('✓ Additional image uploaded:', url)
+    return res.json({ url })
+  } catch (e) {
+    console.error('Additional image upload error:', e)
+    return res.status(500).json({ error: 'Upload failed' })
+  }
+})
+
+// Delete additional image endpoint
+app.delete('/api/upload/additional-image', (req, res) => {
+  try {
+    const imageUrl = req.query.url
+    if (!imageUrl) {
+      return res.status(400).json({ error: 'No URL provided' })
+    }
+    
+    const filePath = path.join(__dirname, '..', decodeURIComponent(imageUrl))
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath)
+      console.log('✓ Deleted additional image:', imageUrl)
+    }
+    return res.json({ success: true })
+  } catch (e) {
+    console.error('Delete additional image error:', e)
+    return res.status(500).json({ error: 'Delete failed' })
+  }
+})
+
+// Upload GLB model endpoint
+app.post('/api/upload/model', uploadModel.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' })
+    }
+    
+    const productFolder = req.productFolder || 'uncategorized'
+    const folderPath = path.join(__dirname, '..', 'products', '3dmodels', productFolder)
+    
+    console.log('📁 Model folder:', folderPath)
+    console.log('📄 Uploaded file:', req.file.filename)
+    console.log('📋 Files before cleanup:', fs.existsSync(folderPath) ? fs.readdirSync(folderPath) : [])
+    
+    // Delete all other files in this product's model folder
+    clearProductFolder(folderPath, req.file.filename)
+    
+    console.log('📋 Files after cleanup:', fs.existsSync(folderPath) ? fs.readdirSync(folderPath) : [])
+    
+    const url = `/products/3dmodels/${productFolder}/${req.file.filename}`
+    console.log('✓ Model uploaded:', url)
+    return res.json({ url })
+  } catch (e) {
+    console.error('Model upload error:', e)
+    return res.status(500).json({ error: 'Upload failed' })
+  }
+})
+
+// =====================
+// ORDERS API
+// =====================
+
+// Get all orders
+app.get('/api/orders', async (req, res) => {
+  try {
+    const allOrders = await orders.find({}).sort({ createdAt: -1 }).toArray()
+    const normalized = allOrders.map(o => ({
+      ...o,
+      _id: o._id.toString(),
+      createdAt: o.createdAt ? new Date(o.createdAt) : new Date()
+    }))
+    return res.json(normalized)
+  } catch (e) {
+    console.error('Get orders error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Create order
+app.post('/api/orders', async (req, res) => {
+  try {
+    const orderData = {
+      ...req.body,
+      status: 'pending',
+      createdAt: new Date()
+    }
+    const result = await orders.insertOne(orderData)
+    return res.json({ ...orderData, _id: result.insertedId.toString() })
+  } catch (e) {
+    console.error('Create order error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Update order status
+app.patch('/api/orders/:id/status', async (req, res) => {
+  try {
+    const { ObjectId } = await import('mongodb')
+    const { status } = req.body
+    await orders.updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: { status } }
+    )
+    return res.json({ success: true })
+  } catch (e) {
+    console.error('Update order status error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// =====================
+// BANNERS API
+// =====================
+
+// Get all banners
+app.get('/api/banners', async (req, res) => {
+  try {
+    const allBanners = await banners.find({}).toArray()
+    const normalized = allBanners.map(b => ({
+      ...b,
+      _id: b._id.toString()
+    }))
+    return res.json(normalized)
+  } catch (e) {
+    console.error('Get banners error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Create banner
+app.post('/api/banners', async (req, res) => {
+  try {
+    const result = await banners.insertOne(req.body)
+    return res.json({ ...req.body, _id: result.insertedId.toString() })
+  } catch (e) {
+    console.error('Create banner error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Update banner
+app.put('/api/banners/:id', async (req, res) => {
+  try {
+    const { ObjectId } = await import('mongodb')
+    const { _id, ...updates } = req.body
+    await banners.updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: updates }
+    )
+    const updated = await banners.findOne({ _id: new ObjectId(req.params.id) })
+    return res.json({ ...updated, _id: updated._id.toString() })
+  } catch (e) {
+    console.error('Update banner error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})
+
+// Delete banner
+app.delete('/api/banners/:id', async (req, res) => {
+  try {
+    const { ObjectId } = await import('mongodb')
+    await banners.deleteOne({ _id: new ObjectId(req.params.id) })
+    return res.json({ success: true })
+  } catch (e) {
+    console.error('Delete banner error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
 })
 
 const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

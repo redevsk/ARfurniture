@@ -1,9 +1,17 @@
 
-import React, { useEffect, useState } from 'react';
-import { Plus, Edit2, Trash2, X, Save, Upload, Box, AlertCircle } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Plus, Edit2, Trash2, X, Save, Upload, Box, AlertCircle, Image, PlusCircle } from 'lucide-react';
 import { Product } from '../../types';
 import { db } from '../../services/db';
 import { CURRENCY } from '../../constants';
+
+// Detect if running on localhost (laptop) vs dev tunnel (phone)
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const TUNNEL_URL = (import.meta as any).env?.VITE_AUTH_API_BASE?.replace(/\/$/, '') || 'http://localhost:4000';
+
+// When on localhost: upload to localhost (fast, no size limits), save tunnel URL for mobile
+// When on phone/tunnel: must upload through tunnel (may hit size limits)
+const UPLOAD_BASE = isLocalhost ? 'http://localhost:4000' : TUNNEL_URL;
 
 export const ProductManager: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -13,7 +21,24 @@ export const ProductManager: React.FC = () => {
   const [formError, setFormError] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  // Form State
+  // File refs
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const modelInputRef = useRef<HTMLInputElement>(null);
+  const additionalImageInputRef = useRef<HTMLInputElement>(null);
+  
+  // Upload states
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [modelFile, setModelFile] = useState<File | null>(null);
+  const [modelFileName, setModelFileName] = useState<string>('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingModel, setUploadingModel] = useState(false);
+  
+  // Additional images state
+  const [additionalImages, setAdditionalImages] = useState<string[]>([]);
+  const [uploadingAdditionalImage, setUploadingAdditionalImage] = useState(false);
+  
+  // Form State - ensure all values are always defined (never undefined) to prevent controlled/uncontrolled warnings
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -29,6 +54,12 @@ export const ProductManager: React.FC = () => {
     isFeatured: false,
     isNewArrival: false
   });
+
+  // Helper to ensure input values are never undefined
+  const safeValue = (value: string | number | boolean | undefined | null): string => {
+    if (value === undefined || value === null) return '';
+    return String(value);
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -46,23 +77,38 @@ export const ProductManager: React.FC = () => {
     }
   };
 
+  // Helper to extract filename from URL path
+  const getFilenameFromUrl = (url: string): string => {
+    if (!url) return '';
+    const parts = url.split('/');
+    return parts[parts.length - 1] || '';
+  };
+
   const handleEdit = (product: Product) => {
     setEditingId(product._id);
     setFormData({
-      name: product.name,
-      description: product.description,
-      price: product.price.toString(),
-      stock: product.stock.toString(),
-      category: product.category,
-      imageUrl: product.imageUrl,
-      arModelUrl: product.arModelUrl,
-      width: product.dimensions.width.toString(),
-      height: product.dimensions.height.toString(),
-      depth: product.dimensions.depth.toString(),
-      unit: product.dimensions.unit,
+      name: product.name || '',
+      description: product.description || '',
+      price: product.price?.toString() || '',
+      stock: product.stock?.toString() || '',
+      category: product.category || 'Chairs',
+      imageUrl: product.imageUrl || '',
+      arModelUrl: product.arModelUrl || '',
+      width: product.dimensions?.width?.toString() || '',
+      height: product.dimensions?.height?.toString() || '',
+      depth: product.dimensions?.depth?.toString() || '',
+      unit: product.dimensions?.unit || 'cm',
       isFeatured: product.isFeatured || false,
       isNewArrival: product.isNewArrival || false
     });
+    // Reset upload states but show existing filenames
+    setImageFile(null);
+    setImagePreview(product.imageUrl || '');
+    setModelFile(null);
+    // Show existing model filename from URL
+    setModelFileName(getFilenameFromUrl(product.arModelUrl || ''));
+    // Load additional images
+    setAdditionalImages(product.images || []);
     setIsModalOpen(true);
   };
 
@@ -83,6 +129,13 @@ export const ProductManager: React.FC = () => {
         isFeatured: false,
         isNewArrival: false
     });
+    // Reset upload states
+    setImageFile(null);
+    setImagePreview('');
+    setModelFile(null);
+    setModelFileName('');
+    // Reset additional images
+    setAdditionalImages([]);
     setIsModalOpen(true);
   };
 
@@ -97,11 +150,133 @@ export const ProductManager: React.FC = () => {
     if (formError) setFormError(''); 
   };
 
+  // Handle image file selection
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setFormError('Please select a valid image file');
+        return;
+      }
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview((e.target?.result as string) || '');
+      };
+      reader.readAsDataURL(file);
+      if (formError) setFormError('');
+    }
+  };
+
+  // Handle model file selection
+  const handleModelFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.name.toLowerCase().endsWith('.glb')) {
+        setFormError('Please select a valid .glb file');
+        return;
+      }
+      setModelFile(file);
+      setModelFileName(file.name);
+      if (formError) setFormError('');
+    }
+  };
+
+  // Upload file to server using FormData (actual file upload, not base64)
+  // Files are organized into product-specific folders
+  // Save as RELATIVE URL so it works from any host (localhost, LAN IP, or tunnel)
+  // Server automatically deletes old files in the product folder
+  const uploadFile = async (file: File, type: 'image' | 'model', productName?: string): Promise<string> => {
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', file);
+    
+    // Pass productName as query param (multer reads body AFTER file upload, so body fields aren't available in destination)
+    const folderName = encodeURIComponent(productName || 'uncategorized');
+    
+    const response = await fetch(`${UPLOAD_BASE}/api/upload/${type}?productName=${folderName}`, {
+      method: 'POST',
+      body: formDataUpload  // No Content-Type header - browser sets it automatically with boundary
+    });
+    
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+    
+    const result = await response.json();
+    // Return RELATIVE path - will work from any host (localhost, LAN IP, tunnel)
+    return result.url;
+  };
+
+  // Upload additional image (to gallery subfolder)
+  const uploadAdditionalImage = async (file: File, productName?: string): Promise<string> => {
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', file);
+    
+    const folderName = encodeURIComponent(productName || 'uncategorized');
+    
+    const response = await fetch(`${UPLOAD_BASE}/api/upload/additional-image?productName=${folderName}`, {
+      method: 'POST',
+      body: formDataUpload
+    });
+    
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+    
+    const result = await response.json();
+    return result.url;
+  };
+
+  // Delete additional image from server
+  const deleteAdditionalImage = async (imageUrl: string): Promise<void> => {
+    await fetch(`${UPLOAD_BASE}/api/upload/additional-image?url=${encodeURIComponent(imageUrl)}`, {
+      method: 'DELETE'
+    });
+  };
+
+  // Additional images handlers
+  const handleAdditionalImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setFormError('Please select a valid image file');
+        return;
+      }
+      try {
+        setUploadingAdditionalImage(true);
+        const uploadedUrl = await uploadAdditionalImage(file, formData.name);
+        setAdditionalImages(prev => [...prev, uploadedUrl]);
+      } catch (err) {
+        setFormError('Failed to upload additional image');
+      } finally {
+        setUploadingAdditionalImage(false);
+        // Reset the input
+        if (additionalImageInputRef.current) {
+          additionalImageInputRef.current.value = '';
+        }
+      }
+    }
+  };
+
+  const handleRemoveAdditionalImage = async (index: number) => {
+    const imageUrl = additionalImages[index];
+    // Delete from server if it's a local file
+    if (imageUrl.startsWith('/products/')) {
+      try {
+        await deleteAdditionalImage(imageUrl);
+      } catch (err) {
+        console.error('Failed to delete image from server:', err);
+      }
+    }
+    setAdditionalImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const validateForm = () => {
     if (!formData.name.trim()) return "Product name is required";
     if (parseFloat(formData.price) < 0) return "Price cannot be negative";
     if (parseInt(formData.stock) < 0) return "Stock cannot be negative";
-    if (!formData.imageUrl.trim()) return "Image URL is required";
+    // Validate image - require file upload if no existing image
+    if (!imageFile && !formData.imageUrl && !editingId) return "Please select an image file";
     return null;
   };
 
@@ -117,14 +292,32 @@ export const ProductManager: React.FC = () => {
     setIsSubmitting(true);
     
     try {
+        let finalImageUrl = formData.imageUrl;
+        let finalModelUrl = formData.arModelUrl;
+
+        // Upload image file if selected
+        if (imageFile) {
+          setUploadingImage(true);
+          finalImageUrl = await uploadFile(imageFile, 'image', formData.name);
+          setUploadingImage(false);
+        }
+
+        // Upload model file if selected
+        if (modelFile) {
+          setUploadingModel(true);
+          finalModelUrl = await uploadFile(modelFile, 'model', formData.name);
+          setUploadingModel(false);
+        }
+
         const productData = {
             name: formData.name,
             description: formData.description,
             price: parseFloat(formData.price) || 0,
             stock: parseInt(formData.stock) || 0,
             category: formData.category,
-            imageUrl: formData.imageUrl,
-            arModelUrl: formData.arModelUrl,
+            imageUrl: finalImageUrl,
+            images: additionalImages,
+            arModelUrl: finalModelUrl,
             dimensions: {
                 width: parseFloat(formData.width) || 0,
                 height: parseFloat(formData.height) || 0,
@@ -164,8 +357,17 @@ export const ProductManager: React.FC = () => {
           isFeatured: false,
           isNewArrival: false
         });
+        // Reset upload states
+        setImageFile(null);
+        setImagePreview('');
+        setModelFile(null);
+        setModelFileName('');
+        // Reset additional images
+        setAdditionalImages([]);
     } catch (err) {
         setFormError("Failed to save product. Please try again.");
+        setUploadingImage(false);
+        setUploadingModel(false);
     } finally {
         setIsSubmitting(false);
     }
@@ -286,11 +488,11 @@ export const ProductManager: React.FC = () => {
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-1">Product Name *</label>
-                                    <input name="name" required value={formData.name} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" placeholder="e.g. Modern Sofa" />
+                                    <input name="name" required value={formData.name || ''} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" placeholder="e.g. Modern Sofa" />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-1">Category</label>
-                                    <select name="category" value={formData.category} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                    <select name="category" value={formData.category || 'Chairs'} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
                                         <option value="Chairs">Chairs</option>
                                         <option value="Sofas">Sofas</option>
                                         <option value="Tables">Tables</option>
@@ -302,28 +504,57 @@ export const ProductManager: React.FC = () => {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-1">Price ({CURRENCY}) *</label>
-                                        <input type="number" step="0.01" min="0" name="price" required value={formData.price} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0.00" />
+                                        <input type="number" step="0.01" min="0" name="price" required value={formData.price || ''} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0.00" />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-1">Stock *</label>
-                                        <input type="number" min="0" name="stock" required value={formData.stock} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0" />
+                                        <input type="number" min="0" name="stock" required value={formData.stock || ''} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0" />
                                     </div>
                                 </div>
                             </div>
                             
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-1">Image URL *</label>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1">Product Image *</label>
                                     <div className="flex gap-2">
-                                        <input name="imageUrl" required value={formData.imageUrl} onChange={handleInputChange} className="flex-1 px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="https://..." />
+                                        <input
+                                            ref={imageInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageFileChange}
+                                            className="hidden"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => imageInputRef.current?.click()}
+                                            className="flex-1 px-4 py-2 rounded-lg border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 transition-colors text-left text-sm text-slate-600"
+                                        >
+                                            {imageFile ? imageFile.name : (formData.imageUrl ? getFilenameFromUrl(formData.imageUrl) : 'Click to select image...')}
+                                        </button>
                                         <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 border border-slate-200 overflow-hidden">
-                                            {formData.imageUrl ? <img src={formData.imageUrl} className="w-full h-full object-cover" alt="Preview" /> : <Upload className="w-4 h-4 text-slate-400" />}
+                                            {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover" alt="Preview" /> : <Upload className="w-4 h-4 text-slate-400" />}
                                         </div>
                                     </div>
+                                    {uploadingImage && <p className="text-xs text-indigo-600 mt-1">Uploading image...</p>}
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-1">AR Model URL (.glb)</label>
-                                    <input name="arModelUrl" value={formData.arModelUrl} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="https://.../model.glb" />
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1">AR Model (.glb)</label>
+                                    <input
+                                        ref={modelInputRef}
+                                        type="file"
+                                        accept=".glb"
+                                        onChange={handleModelFileChange}
+                                        className="hidden"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => modelInputRef.current?.click()}
+                                        className="w-full px-4 py-2 rounded-lg border border-dashed border-slate-300 hover:border-purple-400 hover:bg-purple-50 transition-colors text-left text-sm text-slate-600 flex items-center gap-2"
+                                    >
+                                        <Box className="w-4 h-4 text-purple-500" />
+                                        {modelFile ? modelFileName : (formData.arModelUrl ? getFilenameFromUrl(formData.arModelUrl) : 'Click to select .glb file...')}
+                                    </button>
+                                    {uploadingModel && <p className="text-xs text-purple-600 mt-1">Uploading model...</p>}
                                 </div>
 
                                 {/* Tags Section */}
@@ -343,9 +574,67 @@ export const ProductManager: React.FC = () => {
                             </div>
                         </div>
 
+                        {/* Additional Images Section */}
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                            <div className="flex items-center justify-between mb-3">
+                                <label className="block text-sm font-semibold text-slate-900">
+                                    <Image className="w-4 h-4 inline mr-1.5" />
+                                    Additional Images ({additionalImages.length})
+                                </label>
+                            </div>
+                            
+                            {/* Upload additional image */}
+                            <div className="mb-3">
+                                <input
+                                    ref={additionalImageInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleAdditionalImageFileChange}
+                                    className="hidden"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => additionalImageInputRef.current?.click()}
+                                    disabled={uploadingAdditionalImage}
+                                    className="w-full px-3 py-2 rounded-lg border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 transition-colors text-sm text-slate-600 flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {uploadingAdditionalImage ? (
+                                        <>Uploading...</>
+                                    ) : (
+                                        <>
+                                            <PlusCircle className="w-4 h-4" />
+                                            Click to upload additional image
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                            
+                            {/* Image gallery */}
+                            {additionalImages.length > 0 ? (
+                                <div className="grid grid-cols-4 gap-2">
+                                    {additionalImages.map((img, index) => (
+                                        <div key={index} className="relative group">
+                                            <div className="aspect-square rounded-lg overflow-hidden border border-slate-200 bg-white">
+                                                <img src={img} alt={`Additional ${index + 1}`} className="w-full h-full object-cover" />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveAdditionalImage(index)}
+                                                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-slate-400 text-center py-2">No additional images added</p>
+                            )}
+                        </div>
+
                         <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-1">Description</label>
-                            <textarea name="description" rows={3} value={formData.description} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="Product details..." />
+                            <textarea name="description" rows={3} value={formData.description || ''} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="Product details..." />
                         </div>
 
                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
@@ -353,19 +642,19 @@ export const ProductManager: React.FC = () => {
                             <div className="grid grid-cols-4 gap-3">
                                 <div>
                                     <span className="text-xs text-slate-500 mb-1 block">Width</span>
-                                    <input type="number" name="width" value={formData.width} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500" placeholder="W" />
+                                    <input type="number" name="width" value={formData.width || ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500" placeholder="W" />
                                 </div>
                                 <div>
                                     <span className="text-xs text-slate-500 mb-1 block">Height</span>
-                                    <input type="number" name="height" value={formData.height} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500" placeholder="H" />
+                                    <input type="number" name="height" value={formData.height || ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500" placeholder="H" />
                                 </div>
                                 <div>
                                     <span className="text-xs text-slate-500 mb-1 block">Depth</span>
-                                    <input type="number" name="depth" value={formData.depth} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500" placeholder="D" />
+                                    <input type="number" name="depth" value={formData.depth || ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500" placeholder="D" />
                                 </div>
                                 <div>
                                     <span className="text-xs text-slate-500 mb-1 block">Unit</span>
-                                    <select name="unit" value={formData.unit} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500 bg-white">
+                                    <select name="unit" value={formData.unit || 'cm'} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500 bg-white">
                                         <option value="cm">cm</option>
                                         <option value="in">in</option>
                                     </select>
