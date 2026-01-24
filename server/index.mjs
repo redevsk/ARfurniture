@@ -62,12 +62,6 @@ app.use(express.urlencoded({ extended: true, limit: '200mb' }))
 const productsPath = path.join(__dirname, '..', 'products')
 app.use('/products', express.static(productsPath))
 
-// Serve built frontend in production
-const distPath = path.join(__dirname, '..', 'dist')
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath))
-}
-
 const uri = process.env.MONGODB_URI
 if (!uri) {
   console.error('MONGODB_URI env var is required')
@@ -612,14 +606,3 @@ app.delete('/api/banners/:id', async (req, res) => {
 })
 
 const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
-// Catch-all route: serve frontend for all non-API routes
-app.get('*', (req, res) => {
-  const indexPath = path.join(__dirname, '..', 'dist', 'index.html')
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath)
-  } else {
-    res.status(404).send('Not found')
-  }
-})
-
