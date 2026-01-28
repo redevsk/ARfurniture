@@ -8,8 +8,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "auth-server": "node server/index.mjs",
+    "auth-server:watch": "node --watch server/index.mjs",
     "seed-superadmin": "node scripts/seed-superadmin.mjs",
-    "start": "concurrently \"npm run dev\" \"npm run auth-server\" --names \"CLIENT,SERVER\" --prefix-colors \"cyan,magenta\""
+    "start": "concurrently \"npm run dev\" \"npm run auth-server\" --names \"CLIENT,SERVER\" --prefix-colors \"cyan,magenta\"",
+    "start:watch": "concurrently \"npm run dev\" \"npm run auth-server:watch\" --names \"CLIENT,SERVER\" --prefix-colors \"cyan,magenta\""
   },
   "dependencies": {
     "@google/genai": "^1.30.0",

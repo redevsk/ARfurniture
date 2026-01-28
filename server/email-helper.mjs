@@ -1,6 +1,6 @@
 /**
  * Email helper for AR Furniture using Brevo SMTP API
- * Similar to SET-2 System implementation
+ * Modern, responsive email templates with inline CSS for maximum compatibility
  */
 
 /**
@@ -55,7 +55,7 @@ async function sendEmailViaBrevoAPI(emailData) {
 
   } catch (error) {
     console.error('Error sending email via Brevo API:', error);
-    
+
     return {
       success: false,
       error: error.message
@@ -79,339 +79,93 @@ export async function sendPasswordResetEmail(resetData) {
       throw new Error('Email address is required');
     }
 
-    // Email HTML template - Styled for AR Furniture
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Password Reset - AR Furniture</title>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-        <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
+    // Ultra-modern, premium email HTML template
+    const htmlContent = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Notification - AR Furniture</title>
+  <style type="text/css">
+    body, table, td, p, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse !important; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; outline: none; text-decoration: none; }
+    
+    @media screen and (max-width: 600px) {
+      .container { width: 100% !important; border-radius: 0 !important; }
+      .content { padding: 32px 24px !important; }
+      .header { padding: 40px 24px !important; }
+      .footer { padding: 32px 24px !important; }
+      .code-text { font-size: 32px !important; letter-spacing: 4px !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <div style="display: none; max-height: 0; overflow: hidden;">Reset your password for AR Furniture. Your code is ${resetCode}</div>
+  
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f3f4f6;">
+    <tr>
+      <td align="center" style="padding: 40px 16px;">
+        <table class="container" role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
           
-          body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #1e293b;
-            background-color: #f1f5f9;
-            padding: 24px 16px;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-          }
-          
-          .email-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-          }
-          
-          .header {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-            color: #ffffff;
-            padding: 40px 32px;
-            text-align: center;
-            position: relative;
-          }
-          
-          .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at top right, rgba(139, 92, 246, 0.3) 0%, transparent 50%);
-            pointer-events: none;
-          }
-          
-          .header-content {
-            position: relative;
-            z-index: 1;
-          }
-          
-          .header-icon {
-            width: 64px;
-            height: 64px;
-            background-color: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 16px;
-            font-size: 32px;
-            backdrop-filter: blur(10px);
-          }
-          
-          .header h1 {
-            font-size: 28px;
-            font-weight: 600;
-            margin: 0 0 8px 0;
-            color: #ffffff;
-            letter-spacing: -0.5px;
-          }
-          
-          .header p {
-            font-size: 16px;
-            margin: 0;
-            opacity: 0.95;
-            font-weight: 400;
-          }
-          
-          .content {
-            padding: 32px;
-          }
-          
-          .greeting {
-            font-size: 18px;
-            font-weight: 500;
-            color: #1e293b;
-            margin-bottom: 16px;
-          }
-          
-          .intro-text {
-            font-size: 16px;
-            color: #475569;
-            margin-bottom: 24px;
-            line-height: 1.6;
-          }
-          
-          .reset-code-box {
-            background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%);
-            border-radius: 12px;
-            padding: 32px 24px;
-            margin: 24px 0;
-            border: 2px solid #8b5cf6;
-            text-align: center;
-          }
-          
-          .reset-code-box h2 {
-            color: #6d28d9;
-            font-size: 18px;
-            font-weight: 600;
-            margin: 0 0 20px 0;
-          }
-          
-          .reset-code {
-            display: inline-block;
-            background-color: #ffffff;
-            border: 2px solid #8b5cf6;
-            border-radius: 12px;
-            padding: 20px 32px;
-            font-size: 36px;
-            font-weight: 700;
-            color: #6d28d9;
-            font-family: 'Courier New', 'Roboto Mono', monospace;
-            letter-spacing: 8px;
-            margin: 16px 0;
-            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
-          }
-          
-          .expiry-notice {
-            background-color: #fef3c7;
-            border: 1px solid #f59e0b;
-            border-radius: 8px;
-            padding: 16px;
-            margin: 24px 0;
-            text-align: center;
-          }
-          
-          .expiry-notice p {
-            color: #d97706;
-            font-size: 14px;
-            margin: 0;
-            font-weight: 500;
-          }
-          
-          .security-notice {
-            background-color: #fee2e2;
-            border: 1px solid #ef4444;
-            border-radius: 8px;
-            padding: 16px;
-            margin: 24px 0;
-          }
-          
-          .security-notice h3 {
-            color: #dc2626;
-            font-size: 16px;
-            font-weight: 600;
-            margin: 0 0 12px 0;
-          }
-          
-          .security-notice p {
-            color: #b91c1c;
-            font-size: 14px;
-            margin: 8px 0;
-            line-height: 1.5;
-          }
-          
-          .footer {
-            background-color: #f8fafc;
-            padding: 24px 32px;
-            text-align: center;
-            border-top: 1px solid #e2e8f0;
-          }
-          
-          .footer p {
-            color: #64748b;
-            font-size: 12px;
-            margin: 6px 0;
-            line-height: 1.5;
-          }
-          
-          .footer-brand {
-            font-weight: 600;
-            color: #4f46e5;
-            margin-top: 16px;
-          }
-          
-          @media only screen and (max-width: 600px) {
-            body {
-              padding: 12px 8px;
-            }
-            
-            .header {
-              padding: 32px 24px;
-            }
-            
-            .content {
-              padding: 24px;
-            }
-            
-            .reset-code-box {
-              padding: 24px 16px;
-            }
-            
-            .reset-code {
-              font-size: 28px;
-              letter-spacing: 4px;
-              padding: 16px 24px;
-            }
-            
-            .footer {
-              padding: 20px 24px;
-            }
-            
-            .header h1 {
-              font-size: 24px;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="email-container">
           <!-- Header -->
-          <div class="header">
-            <div class="header-content">
-              <div class="header-icon">🔐</div>
-              <h1>Password Reset Request</h1>
-              <p>AR Furniture Security</p>
-            </div>
-          </div>
-          
-          <!-- Content -->
-          <div class="content">
-            <p class="greeting">Hello, <strong>${fullName}</strong></p>
-            
-            <p class="intro-text">
-              We received a request to reset the password for your AR Furniture account. 
-              Use the verification code below to proceed with your password reset.
-            </p>
-            
-            <!-- Reset Code Box -->
-            <div class="reset-code-box">
-              <h2>Your Verification Code</h2>
-              <div class="reset-code">${resetCode}</div>
-              <p style="color: #6d28d9; font-size: 14px; margin: 0;">
-                Enter this code on the password reset page to continue.
-              </p>
-            </div>
-            
-            <!-- Expiry Notice -->
-            <div class="expiry-notice">
-              <p>⏰ This verification code will expire in <strong>15 minutes</strong> for security reasons.</p>
-            </div>
-            
-            <!-- Security Notice -->
-            <div class="security-notice">
-              <h3>⚠️ Security Alert</h3>
-              <p>
-                If you did not request this password reset, please ignore this email and 
-                contact our support team immediately.
-              </p>
-              <p>
-                Your account security is important to us. Never share your verification 
-                code with anyone.
-              </p>
-            </div>
-          </div>
-          
+          <tr>
+            <td class="header" align="center" style="background: #111827; padding: 48px 40px;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em;">Reset your password</h1>
+              <p style="color: #9ca3af; margin: 8px 0 0; font-size: 15px; font-weight: 400;">We received a request to reset your password</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td class="content" style="padding: 40px;">
+              <p style="margin: 0 0 16px; font-size: 15px; color: #374151; line-height: 1.5;">Hi ${fullName},</p>
+              <p style="margin: 0 0 32px; font-size: 15px; color: #6b7280; line-height: 1.5;">Use the code below to reset your password. This code will expire in <span style="color: #111827; font-weight: 500;">15 minutes</span>.</p>
+              
+              <!-- Code Section -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f3f4f6; border-radius: 8px;">
+                <tr>
+                  <td align="center" style="padding: 32px 24px;">
+                    <p style="margin: 0 0 12px; font-size: 13px; color: #6b7280; font-weight: 500;">Your verification code</p>
+                    <div class="code-text" style="font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace; font-size: 36px; font-weight: 600; color: #111827; letter-spacing: 6px; background-color: #ffffff; padding: 16px 28px; border-radius: 6px; border: 1px solid #e5e7eb; display: inline-block;">${resetCode}</div>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 32px 0 0; font-size: 14px; color: #9ca3af; line-height: 1.5;">If you didn't request a password reset, you can safely ignore this email.</p>
+            </td>
+          </tr>
+
           <!-- Footer -->
-          <div class="footer">
-            <p>This is an automated security message from AR Furniture.</p>
-            <p>Please do not reply to this email.</p>
-            <p>For assistance, please contact our support team.</p>
-            <p class="footer-brand">© ${new Date().getFullYear()} AR Furniture • All rights reserved</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+          <tr>
+            <td class="footer" style="padding: 32px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; text-align: center;">
+              <p style="margin: 0 0 8px; font-size: 13px; color: #6b7280;">&copy; ${new Date().getFullYear()} AR Furniture</p>
+              <p style="margin: 0; font-size: 12px; color: #9ca3af;">This email was sent automatically. Please do not reply.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
-    // Plain text version
+    // Modern plain text version
     const textContent = `
-╔══════════════════════════════════════════════════════════════╗
-║           PASSWORD RESET REQUEST - AR FURNITURE              ║
-╚══════════════════════════════════════════════════════════════╝
-
+AR FURNITURE: PASSWORD RESET
+---------------------------------
 Hello ${fullName},
 
-We received a request to reset the password for your AR Furniture account.
+We received a request to reset your password. Use the code below to proceed:
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔐 YOUR VERIFICATION CODE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RESET CODE: ${resetCode}
 
-                        ${resetCode}
+This code expires in 15 minutes.
 
-⏰ This code expires in 15 minutes for security reasons.
+If you did not request this, please ignore this email. Never share your reset code.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📝 HOW TO RESET YOUR PASSWORD
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. Return to the password reset page
-2. Enter the 6-digit verification code shown above
-3. Create a new, secure password
-4. Confirm your new password
-5. Click "Reset Password" to complete the process
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️  SECURITY ALERT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-If you did not request this password reset, please ignore this 
-email and contact our support team immediately.
-
-Your account security is important to us. Never share your 
-verification code with anyone.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-This is an automated security message from AR Furniture.
-Please do not reply to this email.
-
-For assistance, please contact our support team.
-
-© ${new Date().getFullYear()} AR Furniture. All rights reserved.
+Best regards,
+The AR Furniture Team
     `.trim();
 
     // Prepare email data for Brevo API
@@ -421,37 +175,23 @@ For assistance, please contact our support team.
         email: process.env.BREVO_FROM_EMAIL
       },
       to: [{ email: email }],
-      subject: 'Password Reset Request - AR Furniture',
+      subject: 'Verification Code - AR Furniture',
       htmlContent: htmlContent,
       textContent: textContent
     };
 
-    // Send email using Brevo API
     const result = await sendEmailViaBrevoAPI(emailData);
-
     if (result.success) {
       console.log('Password reset email sent successfully:', result.messageId);
     }
-
     return result;
 
   } catch (error) {
     console.error('Error sending password reset email:', error);
-    
-    return {
-      success: false,
-      error: error.message
-    };
+    return { success: false, error: error.message };
   }
 }
 
-/**
- * Send password reset confirmation email
- * @param {Object} confirmationData - Password reset confirmation information
- * @param {string} confirmationData.email - User's email address
- * @param {string} confirmationData.fullName - User's full name
- * @returns {Promise<Object>} Result of the email sending operation
- */
 export async function sendPasswordResetConfirmationEmail(confirmationData) {
   try {
     const { email, fullName } = confirmationData;
@@ -460,174 +200,78 @@ export async function sendPasswordResetConfirmationEmail(confirmationData) {
       throw new Error('Email address is required');
     }
 
-    // Email HTML template for confirmation
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Password Reset Successful - AR Furniture</title>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-        <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
+    // Ultra-modern, premium confirmation HTML template
+    const htmlContent = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Update - AR Furniture</title>
+  <style type="text/css">
+    body, table, td, p, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse !important; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; outline: none; text-decoration: none; }
+    
+    @media screen and (max-width: 600px) {
+      .container { width: 100% !important; border-radius: 0 !important; }
+      .content { padding: 32px 24px !important; }
+      .header { padding: 40px 24px !important; }
+      .footer { padding: 32px 24px !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <div style="display: none; max-height: 0; overflow: hidden;">Your AR Furniture password has been updated successfully.</div>
+  
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f3f4f6;">
+    <tr>
+      <td align="center" style="padding: 40px 16px;">
+        <table class="container" role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
           
-          body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #1e293b;
-            background-color: #f1f5f9;
-            padding: 24px 16px;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-          }
-          
-          .email-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-          }
-          
-          .header {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: #ffffff;
-            padding: 40px 32px;
-            text-align: center;
-            position: relative;
-          }
-          
-          .header-content {
-            position: relative;
-            z-index: 1;
-          }
-          
-          .header-icon {
-            width: 64px;
-            height: 64px;
-            background-color: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 16px;
-            font-size: 32px;
-          }
-          
-          .header h1 {
-            font-size: 28px;
-            font-weight: 600;
-            margin: 0 0 8px 0;
-            color: #ffffff;
-          }
-          
-          .content {
-            padding: 32px;
-          }
-          
-          .greeting {
-            font-size: 18px;
-            font-weight: 500;
-            color: #1e293b;
-            margin-bottom: 16px;
-          }
-          
-          .success-box {
-            background: linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%);
-            border-radius: 12px;
-            padding: 24px;
-            margin: 24px 0;
-            border: 2px solid #10b981;
-            text-align: center;
-          }
-          
-          .success-box h2 {
-            color: #047857;
-            font-size: 20px;
-            font-weight: 600;
-            margin: 0 0 12px 0;
-          }
-          
-          .success-box p {
-            color: #065f46;
-            font-size: 14px;
-            margin: 0;
-          }
-          
-          .footer {
-            background-color: #f8fafc;
-            padding: 24px 32px;
-            text-align: center;
-            border-top: 1px solid #e2e8f0;
-          }
-          
-          .footer p {
-            color: #64748b;
-            font-size: 12px;
-            margin: 6px 0;
-          }
-          
-          .footer-brand {
-            font-weight: 600;
-            color: #4f46e5;
-            margin-top: 16px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="email-container">
-          <div class="header">
-            <div class="header-content">
-              <div class="header-icon">✅</div>
-              <h1>Password Reset Successful</h1>
-            </div>
-          </div>
-          
-          <div class="content">
-            <p class="greeting">Hello, <strong>${fullName}</strong></p>
-            
-            <div class="success-box">
-              <h2>Your Password Has Been Reset</h2>
-              <p>Your AR Furniture account password has been successfully changed. You can now log in with your new password.</p>
-            </div>
-            
-            <p style="color: #475569; font-size: 14px; margin-top: 24px;">
-              If you did not make this change, please contact our support team immediately to secure your account.
-            </p>
-          </div>
-          
-          <div class="footer">
-            <p>This is an automated message from AR Furniture.</p>
-            <p class="footer-brand">© ${new Date().getFullYear()} AR Furniture • All rights reserved</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+          <!-- Header -->
+          <tr>
+            <td class="header" align="center" style="background: #111827; padding: 48px 40px;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em;">Password updated</h1>
+              <p style="color: #9ca3af; margin: 8px 0 0; font-size: 15px; font-weight: 400;">Your password has been successfully changed</p>
+            </td>
+          </tr>
 
-    // Plain text version
+          <!-- Body -->
+          <tr>
+            <td class="content" style="padding: 40px;">
+              <p style="margin: 0 0 16px; font-size: 15px; color: #374151; line-height: 1.5;">Hi ${fullName},</p>
+              <p style="margin: 0 0 24px; font-size: 15px; color: #6b7280; line-height: 1.5;">Your password has been updated successfully. You can now sign in with your new password.</p>
+              
+              <p style="margin: 0; font-size: 14px; color: #9ca3af; line-height: 1.5;">If you didn't make this change, please contact us immediately at support@arfurniture.com</p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td class="footer" style="padding: 32px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; text-align: center;">
+              <p style="margin: 0 0 8px; font-size: 13px; color: #6b7280;">&copy; ${new Date().getFullYear()} AR Furniture</p>
+              <p style="margin: 0; font-size: 12px; color: #9ca3af;">This email was sent automatically. Please do not reply.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+    // Modern plain text version
     const textContent = `
-╔══════════════════════════════════════════════════════════════╗
-║         PASSWORD RESET SUCCESSFUL - AR FURNITURE             ║
-╚══════════════════════════════════════════════════════════════╝
-
+AR FURNITURE: PASSWORD UPDATED
+---------------------------------
 Hello ${fullName},
 
-✅ YOUR PASSWORD HAS BEEN RESET SUCCESSFULLY
+Your password has been changed successfully.
 
-Your AR Furniture account password has been successfully changed. 
-You can now log in with your new password.
+If you did not make this change, please contact our support team immediately at support@arfurniture.com.
 
-If you did not make this change, please contact our support team 
-immediately to secure your account.
-
-© ${new Date().getFullYear()} AR Furniture. All rights reserved.
+Best regards,
+The AR Furniture Team
     `.trim();
 
     // Prepare email data for Brevo API
@@ -637,26 +281,20 @@ immediately to secure your account.
         email: process.env.BREVO_FROM_EMAIL
       },
       to: [{ email: email }],
-      subject: 'Password Reset Successful - AR Furniture',
+      subject: 'Security Update: Password Changed - AR Furniture',
       htmlContent: htmlContent,
       textContent: textContent
     };
 
-    // Send email using Brevo API
     const result = await sendEmailViaBrevoAPI(emailData);
-
     if (result.success) {
-      console.log('Password reset confirmation email sent successfully:', result.messageId);
+      console.log('Confirmation email sent successfully:', result.messageId);
     }
-
     return result;
 
   } catch (error) {
-    console.error('Error sending password reset confirmation email:', error);
-    
-    return {
-      success: false,
-      error: error.message
-    };
+    console.error('Error sending confirmation email:', error);
+    return { success: false, error: error.message };
   }
 }
+
