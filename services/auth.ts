@@ -1,7 +1,7 @@
 import { User, UserRole, Address } from '../types';
 
 const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
-const AUTH_API_BASE = metaEnv?.VITE_AUTH_API_BASE || 'http://localhost:4000';
+const AUTH_API_BASE = (metaEnv?.VITE_AUTH_API_BASE || 'http://localhost:4000').replace(/\/$/, '');
 
 console.log('Auth API Base URL:', AUTH_API_BASE);
 
@@ -19,6 +19,36 @@ const parseResponse = async (res: Response) => {
     throw error;
   }
   return data;
+};
+
+// Forgot Password - Request reset code
+export const requestPasswordReset = async (email: string): Promise<{ success: boolean; resetToken?: string; message: string }> => {
+  const res = await fetch(`${AUTH_API_BASE}/api/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email.trim() })
+  });
+  return parseResponse(res);
+};
+
+// Forgot Password - Verify reset code
+export const verifyResetCode = async (resetToken: string, code: string): Promise<{ success: boolean; message: string }> => {
+  const res = await fetch(`${AUTH_API_BASE}/api/forgot-password/verify-code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ resetToken, code })
+  });
+  return parseResponse(res);
+};
+
+// Forgot Password - Reset password
+export const resetPassword = async (resetToken: string, code: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+  const res = await fetch(`${AUTH_API_BASE}/api/forgot-password/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ resetToken, code, newPassword })
+  });
+  return parseResponse(res);
 };
 
 // Customer Login
