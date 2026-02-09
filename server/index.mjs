@@ -795,9 +795,16 @@ app.post('/api/upload/image', uploadImageToSupabase.single('file'), async (req, 
     // Default variant name to 'main' if not provided
     const vName = sanitizeFolderName(variantName || 'main')
     const typeFolder = 'images'
-    const filePath = `${productFolder}/${vName}/${typeFolder}/${fileName}`
+    const folderPath = `${productFolder}/${vName}/${typeFolder}`
+    const filePath = `${folderPath}/${fileName}`
 
-    console.log(`Uploading image to Supabase: ${filePath}`)
+    console.log(`[UPLOAD IMAGE] Uploading to: ${filePath}`)
+
+    // CRITICAL: Delete ALL existing files in this variant's images folder first
+    console.log(`[UPLOAD IMAGE] Deleting all existing files in: ${folderPath}`)
+    await deleteSupabaseFolder(folderPath)
+
+    console.log(`[UPLOAD IMAGE] Now uploading new image: ${filePath}`)
 
     const { error } = await supabase.storage
       .from(BUCKET_NAME)
@@ -915,9 +922,16 @@ app.post('/api/upload/model', uploadModelToSupabase.single('file'), async (req, 
     // Default variant name to 'main' if not provided
     const vName = sanitizeFolderName(variantName || 'main')
     const typeFolder = 'model'
-    const filePath = `${productFolder}/${vName}/${typeFolder}/${fileName}`
+    const folderPath = `${productFolder}/${vName}/${typeFolder}`
+    const filePath = `${folderPath}/${fileName}`
 
-    console.log(`Uploading model to Supabase: ${filePath}`)
+    console.log(`[UPLOAD MODEL] Uploading to: ${filePath}`)
+
+    // CRITICAL: Delete ALL existing files in this variant's model folder first
+    console.log(`[UPLOAD MODEL] Deleting all existing files in: ${folderPath}`)
+    await deleteSupabaseFolder(folderPath)
+
+    console.log(`[UPLOAD MODEL] Now uploading new model: ${filePath}`)
 
     // Upload to Supabase Bucket
     const { data, error } = await supabase.storage
