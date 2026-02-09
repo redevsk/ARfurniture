@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url'
 import multer from 'multer'
 import crypto from 'crypto'
 import { sendPasswordResetEmail, sendPasswordResetConfirmationEmail } from './email-helper.mjs'
+import { createClient } from '@supabase/supabase-js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -49,7 +50,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
   res.header('Access-Control-Allow-Credentials', 'true')
-  
+
   // Handle preflight
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200)
@@ -136,14 +137,14 @@ app.post('/api/admins/login', async (req, res) => {
   try {
     const { identifier = '', password = '' } = req.body || {}
     const normalizedIdentifier = identifier.trim().toLowerCase()
-    
+
     if (!normalizedIdentifier || !password) {
       console.log('✗ Admin login failed: Missing credentials')
       return res.status(400).json({ error: 'Missing credentials' })
     }
-    
+
     console.log('→ Admin login attempt for:', normalizedIdentifier)
-    
+
     // Search by email OR username (both case-insensitive)
     const admin = await admins.findOne({
       $or: [
@@ -151,20 +152,20 @@ app.post('/api/admins/login', async (req, res) => {
         { username: normalizedIdentifier }
       ]
     })
-    
+
     if (!admin) {
       console.log('✗ Admin not found for identifier:', normalizedIdentifier)
       return res.status(401).json({ error: 'Invalid credentials' })
     }
-    
+
     console.log('→ Admin found, verifying password...')
     const ok = await bcrypt.compare(password, admin.password)
-    
+
     if (!ok) {
       console.log('✗ Invalid password for:', normalizedIdentifier)
       return res.status(401).json({ error: 'Invalid credentials' })
     }
-    
+
     console.log('✓ Admin login successful:', admin.email, '(', admin.username, ')')
     return res.json(normalizeAdmin(admin))
   } catch (e) {
@@ -472,15 +473,130 @@ app.post('/api/products', async (req, res) => {
 })
 
 // Update product
+
 app.put('/api/products/:id', async (req, res) => {
   try {
     const { ObjectId } = await import('mongodb')
     const { _id, ...updates } = req.body
+
+    console.log(`[UPDATE PRODUCT] Updating product ID: ${req.params.id}`)
+    console.log(`[UPDATE PRODUCT] Received variants:`, updates.variants)
+
+    // Get existing product to handle file cleanup
+    const existingProduct = await products.findOne({ _id: new ObjectId(req.params.id) })
+
+    console.log(`[UPDATE PRODUCT] Existing product variants in DB:`, existingProduct?.variants)
+
+    if (existingProduct) {
+      // 1. Handle main image replacement
+      if (updates.image && existingProduct.image && updates.image !== existingProduct.image) {
+        const oldPath = getPathFromUrl(existingProduct.image)
+        if (oldPath) {
+          console.log('Deleting old image:', oldPath)
+          await supabase.storage.from(BUCKET_NAME).remove([oldPath])
+        }
+      }
+
+      // 2. Handle additional images removal
+      if (updates.images && Array.isArray(updates.images) && existingProduct.images && Array.isArray(existingProduct.images)) {
+        const newImagesSet = new Set(updates.images)
+        const imagesToDelete = existingProduct.images.filter(img => !newImagesSet.has(img))
+
+        if (imagesToDelete.length > 0) {
+          const pathsToDelete = imagesToDelete.map(url => getPathFromUrl(url)).filter(Boolean)
+          if (pathsToDelete.length > 0) {
+            console.log('Deleting removed additional images:', pathsToDelete)
+            await supabase.storage.from(BUCKET_NAME).remove(pathsToDelete)
+          }
+        }
+      }
+
+      // 3. Handle AR model replacement
+      if (updates.arModelUrl && existingProduct.arModelUrl && updates.arModelUrl !== existingProduct.arModelUrl) {
+        const oldModelPath = getPathFromUrl(existingProduct.arModelUrl)
+        if (oldModelPath) {
+          console.log('Deleting old AR model:', oldModelPath)
+          await supabase.storage.from(BUCKET_NAME).remove([oldModelPath])
+        }
+      }
+      // 4. Handle variant asset cleanup
+      if (updates.variants && Array.isArray(updates.variants) && existingProduct.variants && Array.isArray(existingProduct.variants)) {
+        console.log(`[VARIANT CLEANUP] Checking variants for product "${existingProduct.name}"`)
+        console.log(`[VARIANT CLEANUP] Old variants:`, existingProduct.variants.map(v => ({ id: v.id, name: v.name })))
+        console.log(`[VARIANT CLEANUP] New variants:`, updates.variants.map(v => ({ id: v.id, name: v.name })))
+
+        const newVariantsMap = new Map(updates.variants.map(v => [v.id, v]))
+
+        for (const oldVariant of existingProduct.variants) {
+          const newVariant = newVariantsMap.get(oldVariant.id)
+
+          if (!newVariant) {
+            console.log(`[VARIANT CLEANUP] 🗑️ VARIANT DELETED: "${oldVariant.name}" (ID: ${oldVariant.id})`)
+
+            // 1. Delete specific files by URL (Bulletproof method)
+            const assetsToPurge = []
+            if (oldVariant.imageUrl) assetsToPurge.push(getPathFromUrl(oldVariant.imageUrl))
+            if (oldVariant.arModelUrl) assetsToPurge.push(getPathFromUrl(oldVariant.arModelUrl))
+
+            const filteredAssets = assetsToPurge.filter(Boolean)
+            if (filteredAssets.length > 0) {
+              console.log(`[STORAGE] Purging specific files for variant "${oldVariant.name}":`, filteredAssets)
+              const { error: removeError } = await supabase.storage.from(BUCKET_NAME).remove(filteredAssets)
+              if (removeError) {
+                console.error(`[STORAGE] ❌ Error removing files:`, removeError)
+              } else {
+                console.log(`[STORAGE] ✅ Successfully removed ${filteredAssets.length} files`)
+              }
+            }
+
+            // 2. Purge folders (handles both old and new structures)
+            const productFolder = sanitizeFolderName(existingProduct.name)
+            const vName = sanitizeFolderName(oldVariant.name)
+
+            console.log(`[STORAGE] Attempting to delete folders for variant "${oldVariant.name}"`)
+            console.log(`[STORAGE] Product folder: "${productFolder}", Variant folder: "${vName}"`)
+
+            // Try new structure: product/variant/
+            console.log(`[STORAGE] Trying new structure: ${productFolder}/${vName}`)
+            await deleteSupabaseFolder(`${productFolder}/${vName}`)
+
+            // Try old structure: product/variants/variant/
+            console.log(`[STORAGE] Trying old structure: ${productFolder}/variants/${vName}`)
+            await deleteSupabaseFolder(`${productFolder}/variants/${vName}`)
+          } else {
+            // Variant still exists, check for asset updates
+            const assetsToRemove = []
+
+            // Image changed?
+            if (newVariant.imageUrl !== oldVariant.imageUrl && oldVariant.imageUrl) {
+              assetsToRemove.push(getPathFromUrl(oldVariant.imageUrl))
+            }
+
+            // Model changed?
+            if (newVariant.arModelUrl !== oldVariant.arModelUrl && oldVariant.arModelUrl) {
+              assetsToRemove.push(getPathFromUrl(oldVariant.arModelUrl))
+            }
+
+            const filteredAssets = assetsToRemove.filter(Boolean)
+            if (filteredAssets.length > 0) {
+              console.log(`Deleting old assets for variant ${oldVariant.name}:`, filteredAssets)
+              await supabase.storage.from(BUCKET_NAME).remove(filteredAssets)
+            }
+          }
+        }
+      }
+    }
+
+    console.log(`[UPDATE PRODUCT] About to save to DB. Updates object:`, JSON.stringify(updates, null, 2))
+
     await products.updateOne(
       { _id: new ObjectId(req.params.id) },
       { $set: updates }
     )
     const updated = await products.findOne({ _id: new ObjectId(req.params.id) })
+
+    console.log(`[UPDATE PRODUCT] After save, product variants in DB:`, updated?.variants)
+
     return res.json({ ...updated, _id: updated._id.toString() })
   } catch (e) {
     console.error('Update product error:', e)
@@ -488,47 +604,24 @@ app.put('/api/products/:id', async (req, res) => {
   }
 })
 
-// Helper to delete an entire folder recursively
-const deleteProductFolders = (productName) => {
-  if (!productName) return
-  const folderName = productName.toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .substring(0, 50)
-    || 'uncategorized'
-  
-  const imageFolderPath = path.join(__dirname, '..', 'products', 'images', folderName)
-  const modelFolderPath = path.join(__dirname, '..', 'products', '3dmodels', folderName)
-  
-  // Delete image folder (includes gallery subfolder)
-  if (fs.existsSync(imageFolderPath)) {
-    fs.rmSync(imageFolderPath, { recursive: true, force: true })
-    console.log('✓ Deleted image folder:', imageFolderPath)
-  }
-  
-  // Delete model folder
-  if (fs.existsSync(modelFolderPath)) {
-    fs.rmSync(modelFolderPath, { recursive: true, force: true })
-    console.log('✓ Deleted model folder:', modelFolderPath)
-  }
-}
+
 
 // Delete product
 app.delete('/api/products/:id', async (req, res) => {
   try {
     const { ObjectId } = await import('mongodb')
-    
+
     // First, get the product to know its name (for folder deletion)
     const product = await products.findOne({ _id: new ObjectId(req.params.id) })
-    
+
     // Delete from database
     await products.deleteOne({ _id: new ObjectId(req.params.id) })
-    
+
     // Delete product folders (images and 3dmodels)
     if (product && product.name) {
-      deleteProductFolders(product.name)
+      await deleteProductFolders(product.name)
     }
-    
+
     return res.json({ success: true })
   } catch (e) {
     console.error('Delete product error:', e)
@@ -536,9 +629,23 @@ app.delete('/api/products/:id', async (req, res) => {
   }
 })
 
-// =====================
-// FILE UPLOAD API
-// =====================
+// Configure Supabase
+const supabaseUrl = process.env.SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+// Only initialize if we have the keys
+let supabase = null
+if (supabaseUrl && supabaseKey) {
+  try {
+    supabase = createClient(supabaseUrl, supabaseKey)
+    console.log('✅ Supabase Configured for URL:', supabaseUrl)
+  } catch (err) {
+    console.error('❌ Supabase Init Error:', err)
+  }
+} else {
+  console.warn('⚠️ Supabase credentials missing! Uploads will not work.')
+}
+const BUCKET_NAME = 'ARfurniture_bucket'
+
 
 // Helper to sanitize folder names
 const sanitizeFolderName = (name) => {
@@ -550,158 +657,238 @@ const sanitizeFolderName = (name) => {
     || 'uncategorized'
 }
 
-// Configure multer for main image storage (1 per product)
-const imageStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const productFolder = sanitizeFolderName(req.body.productName || req.query.productName)
-    const dir = path.join(__dirname, '..', 'products', 'images', productFolder)
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-    req.productFolder = productFolder
-    cb(null, dir)
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.jpg'
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`
-    cb(null, uniqueName)
-  }
+// Helper to sanitize file names (preserve extension)
+const sanitizeFileName = (originalName) => {
+  if (!originalName) return 'unnamed-file'
+  const ext = path.extname(originalName)
+  const name = path.parse(originalName).name
+
+  const sanitizedName = name.toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 100)
+
+  return `${sanitizedName}${ext}`
+}
+
+// Memory storage for uploads
+const memoryStorage = multer.memoryStorage()
+
+const uploadModelToSupabase = multer({
+  storage: memoryStorage,
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
 })
 
-// Configure multer for additional images (multiple per product)
-const additionalImageStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const productFolder = sanitizeFolderName(req.body.productName || req.query.productName)
-    const dir = path.join(__dirname, '..', 'products', 'images', productFolder, 'gallery')
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-    req.productFolder = productFolder
-    cb(null, dir)
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.jpg'
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`
-    cb(null, uniqueName)
-  }
+const uploadImageToSupabase = multer({
+  storage: memoryStorage,
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 })
 
-const modelStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const productFolder = sanitizeFolderName(req.body.productName || req.query.productName)
-    const dir = path.join(__dirname, '..', 'products', '3dmodels', productFolder)
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-    req.productFolder = productFolder  // Store for later use
-    cb(null, dir)
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.glb'
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`
-    cb(null, uniqueName)
-  }
-})
-
-const uploadImage = multer({ 
-  storage: imageStorage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true)
-    } else {
-      cb(new Error('Only image files are allowed'))
-    }
-  }
-})
-
-const uploadAdditionalImage = multer({ 
-  storage: additionalImageStorage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true)
-    } else {
-      cb(new Error('Only image files are allowed'))
-    }
-  }
-})
-
-const uploadModel = multer({ 
-  storage: modelStorage,
-  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB limit for 3D models
-  fileFilter: (req, file, cb) => {
-    if (file.originalname.toLowerCase().endsWith('.glb')) {
-      cb(null, true)
-    } else {
-      cb(new Error('Only .glb files are allowed'))
-    }
-  }
-})
-
-// Helper to delete all files in a folder (except the one being uploaded)
-const clearProductFolder = (folderPath, keepFilename) => {
+// Helper to extract path from Supabase Public URL
+const getPathFromUrl = (url) => {
+  if (!url) return null
   try {
-    if (!fs.existsSync(folderPath)) return
-    const files = fs.readdirSync(folderPath)
-    for (const file of files) {
-      if (file !== keepFilename) {
-        const filePath = path.join(folderPath, file)
-        fs.unlinkSync(filePath)
-        console.log('✓ Deleted old file:', filePath)
-      }
+    // Example: https://project.supabase.co/storage/v1/object/public/ARfurniture_bucket/path/to/file.ext
+    // We need 'path/to/file.ext'
+    const bucketToken = `${BUCKET_NAME}/`
+    if (url.includes(bucketToken)) {
+      return url.split(bucketToken)[1]
     }
+    return null
   } catch (e) {
-    console.error('Failed to clear folder:', e)
+    console.error('Error extracting path from URL:', e)
+    return null
   }
 }
 
-// Upload image endpoint
-app.post('/api/upload/image', uploadImage.single('file'), (req, res) => {
+// Helper to delete Supabase folder content (recursive)
+const deleteSupabaseFolder = async (folderPath) => {
+  if (!supabase) return
+  console.log(`[STORAGE] 🗑️ Initiating recursive purge for path: ${folderPath}`)
+  try {
+    // List files and folders at this path
+    const { data: list, error: listError } = await supabase.storage
+      .from(BUCKET_NAME)
+      .list(folderPath, {
+        limit: 1000,
+        sortBy: { column: 'name', order: 'asc' }
+      })
+
+    if (listError) {
+      // If folder doesn't exist, that's fine - nothing to delete
+      if (listError.message?.includes('not found') || listError.statusCode === '404') {
+        console.log(`[STORAGE] ℹ️ Folder does not exist: ${folderPath}`)
+        return
+      }
+      throw listError
+    }
+
+    if (list && list.length > 0) {
+      // Separate files and folders
+      const files = []
+      const folders = []
+
+      for (const item of list) {
+        if (item.id) {
+          // It's a file
+          files.push(`${folderPath}/${item.name}`)
+        } else {
+          // It's a folder - recursively delete it first
+          folders.push(item.name)
+        }
+      }
+
+      // Recursively delete subfolders first
+      for (const folder of folders) {
+        await deleteSupabaseFolder(`${folderPath}/${folder}`)
+      }
+
+      // Delete files in current folder
+      if (files.length > 0) {
+        console.log(`[STORAGE] 🔥 Deleting ${files.length} files from ${folderPath}...`)
+        const { error: removeError } = await supabase.storage
+          .from(BUCKET_NAME)
+          .remove(files)
+
+        if (removeError) {
+          console.error(`[STORAGE] ❌ Failed to remove files:`, removeError)
+          throw removeError
+        }
+      }
+
+      console.log(`[STORAGE] ✅ Successfully purged folder: ${folderPath}`)
+    } else {
+      console.log(`[STORAGE] ℹ️ Folder is already empty: ${folderPath}`)
+    }
+  } catch (e) {
+    console.error(`[STORAGE] ❌ Critical error during purge of ${folderPath}:`, e)
+  }
+}
+
+// Helper to delete all product assets (Supabase version)
+const deleteProductFolders = async (productName) => {
+  if (!productName) return
+  const folderName = sanitizeFolderName(productName)
+  await deleteSupabaseFolder(folderName)
+}
+
+// =====================
+// FILE UPLOAD API
+// =====================
+
+// Upload image endpoint (Supabase)
+app.post('/api/upload/image', uploadImageToSupabase.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' })
     }
-    
-    const productFolder = req.productFolder || 'uncategorized'
-    const folderPath = path.join(__dirname, '..', 'products', 'images', productFolder)
-    
-    // Delete all other files in this product's image folder
-    clearProductFolder(folderPath, req.file.filename)
-    
-    const url = `/products/images/${productFolder}/${req.file.filename}`
-    console.log('✓ Image uploaded:', url)
+
+    if (!supabase) {
+      return res.status(500).json({ error: 'Storage not configured' })
+    }
+
+    const productFolder = sanitizeFolderName(req.body.productName || req.query.productName)
+    const variantName = req.body.variantName || req.query.variantName
+    const fileName = `${Date.now()}-${sanitizeFileName(req.file.originalname)}`
+
+    // New Structure: {product-name}/{variant-name}/images/{filename}
+    // Default variant name to 'main' if not provided
+    const vName = sanitizeFolderName(variantName || 'main')
+    const typeFolder = 'images'
+    const filePath = `${productFolder}/${vName}/${typeFolder}/${fileName}`
+
+    console.log(`Uploading image to Supabase: ${filePath}`)
+
+    const { error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(filePath, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true
+      })
+
+    if (error) throw error
+
+    const { data: publicUrlData } = supabase.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(filePath)
+
+    const url = publicUrlData.publicUrl
+    console.log('✓ Image uploaded (Supabase):', url)
     return res.json({ url })
+
   } catch (e) {
     console.error('Image upload error:', e)
-    return res.status(500).json({ error: 'Upload failed' })
+    return res.status(500).json({ error: 'Upload failed: ' + e.message })
   }
 })
 
-// Upload additional image endpoint (goes to gallery subfolder, no auto-delete)
-app.post('/api/upload/additional-image', uploadAdditionalImage.single('file'), (req, res) => {
+// Upload additional image endpoint (Supabase)
+app.post('/api/upload/additional-image', uploadImageToSupabase.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' })
     }
-    
-    const productFolder = req.productFolder || 'uncategorized'
-    const url = `/products/images/${productFolder}/gallery/${req.file.filename}`
-    console.log('✓ Additional image uploaded:', url)
+
+    if (!supabase) {
+      return res.status(500).json({ error: 'Storage not configured' })
+    }
+
+    const productFolder = sanitizeFolderName(req.body.productName || req.query.productName)
+    const fileName = `${Date.now()}-${sanitizeFileName(req.file.originalname)}`
+
+    // New Structure: {product-name}/additional-images/{filename}
+    const filePath = `${productFolder}/additional-images/${fileName}`
+
+    console.log(`Uploading gallery image to Supabase: ${filePath}`)
+
+    const { error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(filePath, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true
+      })
+
+    if (error) throw error
+
+    const { data: publicUrlData } = supabase.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(filePath)
+
+    const url = publicUrlData.publicUrl
+    console.log('✓ Additional image uploaded (Supabase):', url)
     return res.json({ url })
+
   } catch (e) {
     console.error('Additional image upload error:', e)
-    return res.status(500).json({ error: 'Upload failed' })
+    return res.status(500).json({ error: 'Upload failed: ' + e.message })
   }
 })
 
-// Delete additional image endpoint
-app.delete('/api/upload/additional-image', (req, res) => {
+// Delete additional image endpoint (Supabase)
+app.delete('/api/upload/additional-image', async (req, res) => {
   try {
     const imageUrl = req.query.url
     if (!imageUrl) {
       return res.status(400).json({ error: 'No URL provided' })
     }
-    
-    const filePath = path.join(__dirname, '..', decodeURIComponent(imageUrl))
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath)
-      console.log('✓ Deleted additional image:', imageUrl)
+
+    if (!supabase) {
+      return res.status(500).json({ error: 'Storage not configured' })
     }
+
+    const filePath = getPathFromUrl(imageUrl)
+    if (filePath) {
+      console.log('Deleting file from Supabase:', filePath)
+      const { error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .remove([filePath])
+
+      if (error) throw error
+      console.log('✓ Deleted additional image')
+    } else {
+      console.log('⚠ Could not extract path from URL, skipping delete:', imageUrl)
+    }
+
     return res.json({ success: true })
   } catch (e) {
     console.error('Delete additional image error:', e)
@@ -709,31 +896,54 @@ app.delete('/api/upload/additional-image', (req, res) => {
   }
 })
 
-// Upload GLB model endpoint
-app.post('/api/upload/model', uploadModel.single('file'), (req, res) => {
+// Upload GLB model endpoint (Supabase)
+app.post('/api/upload/model', uploadModelToSupabase.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' })
     }
-    
-    const productFolder = req.productFolder || 'uncategorized'
-    const folderPath = path.join(__dirname, '..', 'products', '3dmodels', productFolder)
-    
-    console.log('📁 Model folder:', folderPath)
-    console.log('📄 Uploaded file:', req.file.filename)
-    console.log('📋 Files before cleanup:', fs.existsSync(folderPath) ? fs.readdirSync(folderPath) : [])
-    
-    // Delete all other files in this product's model folder
-    clearProductFolder(folderPath, req.file.filename)
-    
-    console.log('📋 Files after cleanup:', fs.existsSync(folderPath) ? fs.readdirSync(folderPath) : [])
-    
-    const url = `/products/3dmodels/${productFolder}/${req.file.filename}`
-    console.log('✓ Model uploaded:', url)
+
+    if (!supabase) {
+      return res.status(500).json({ error: 'Storage not configured' })
+    }
+
+    const productFolder = sanitizeFolderName(req.body.productName || req.query.productName)
+    const variantName = req.body.variantName || req.query.variantName
+    const fileName = `${Date.now()}-${sanitizeFileName(req.file.originalname)}`
+
+    // New Structure: {product-name}/{variant-name}/model/{filename}
+    // Default variant name to 'main' if not provided
+    const vName = sanitizeFolderName(variantName || 'main')
+    const typeFolder = 'model'
+    const filePath = `${productFolder}/${vName}/${typeFolder}/${fileName}`
+
+    console.log(`Uploading model to Supabase: ${filePath}`)
+
+    // Upload to Supabase Bucket
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(filePath, req.file.buffer, {
+        contentType: 'model/gltf-binary',
+        upsert: true
+      })
+
+    if (error) {
+      console.error('Supabase upload error:', error)
+      throw error
+    }
+
+    // Get Public URL
+    const { data: publicUrlData } = supabase.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(filePath)
+
+    const url = publicUrlData.publicUrl
+    console.log('✓ Model uploaded (Supabase):', url)
     return res.json({ url })
+
   } catch (e) {
-    console.error('Model upload error:', e)
-    return res.status(500).json({ error: 'Upload failed' })
+    console.error('Model upload error details:', e)
+    return res.status(500).json({ error: 'Upload failed: ' + e.message })
   }
 })
 

@@ -10,7 +10,7 @@ import { ProductManager } from './pages/Admin/ProductManager';
 import { OrderManagement } from './pages/Admin/OrderManagement';
 import { MarketingManager } from './pages/Admin/MarketingManager';
 import { AdminLogin } from './pages/Admin/AdminLogin.tsx';
-import { UserRole, CartItem, Product, User, Address } from './types';
+import { UserRole, CartItem, Product, User, Address, ProductVariant } from './types';
 import { loginUser, registerUser, updateUserAddress, loginAdmin } from './services/auth';
 
 // --- Context Definitions ---
@@ -36,8 +36,9 @@ export const useAuth = () => {
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: Product) => void;
-  removeFromCart: (id: string) => void;
+  addToCart: (product: Product, variant?: ProductVariant) => void;
+  removeFromCart: (id: string, variantId?: string) => void;
+  updateQuantity: (id: string, delta: number, variantId?: string) => void;
   clearCart: () => void;
 }
 
@@ -90,7 +91,7 @@ const AppRoutes: React.FC = () => {
             <Route path="/admin/marketing" element={
               user?.role === UserRole.ADMIN ? <MarketingManager /> : <Navigate to="/admin/login" replace />
             } />
-            
+
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
@@ -140,20 +141,35 @@ const App: React.FC = () => {
   };
 
   // Cart Handlers
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, variant?: ProductVariant) => {
     setCart(prev => {
-      const existing = prev.find(item => item._id === product._id);
+      const existing = prev.find(item =>
+        item._id === product._id &&
+        (variant ? item.selectedVariant?.id === variant.id : !item.selectedVariant)
+      );
+
       if (existing) {
-        return prev.map(item => 
-          item._id === product._id ? { ...item, quantity: item.quantity + 1 } : item
+        return prev.map(item =>
+          (item._id === product._id && (variant ? item.selectedVariant?.id === variant.id : !item.selectedVariant))
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
         );
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prev, { ...product, quantity: 1, selectedVariant: variant }];
     });
   };
 
-  const removeFromCart = (id: string) => {
-    setCart(prev => prev.filter(item => item._id !== id));
+  const removeFromCart = (id: string, variantId?: string) => {
+    setCart(prev => prev.filter(item => !(item._id === id && (variantId ? item.selectedVariant?.id === variantId : !item.selectedVariant))));
+  };
+
+  const updateQuantity = (id: string, delta: number, variantId?: string) => {
+    setCart(prev => prev.map(item => {
+      if (item._id === id && (variantId ? item.selectedVariant?.id === variantId : !item.selectedVariant)) {
+        return { ...item, quantity: Math.max(1, item.quantity + delta) };
+      }
+      return item;
+    }));
   };
 
   const clearCart = () => setCart([]);
@@ -169,7 +185,7 @@ const App: React.FC = () => {
       isAuthModalOpen,
       setAuthModalOpen
     }}>
-      <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart }}>
+      <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart }}>
         <Router>
           <AppRoutes />
         </Router>

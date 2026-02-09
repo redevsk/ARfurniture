@@ -40,11 +40,24 @@ export interface Product {
   dimensions: Dimensions;
   isFeatured?: boolean;
   isNewArrival?: boolean;
+  color?: string; // Main product color (hex or name)
+  colorName?: string; // Added color name (e.g., "Light Oak")
+  variants?: ProductVariant[]; // Added variants support
   createdAt: Date;
+}
+
+export interface ProductVariant {
+  id: string;
+  name: string; // e.g., "Red", "Blue"
+  color: string; // Hex code or standard color name for UI swatches
+  stock?: number;
+  imageUrl: string;
+  arModelUrl: string;
 }
 
 export interface CartItem extends Product {
   quantity: number;
+  selectedVariant?: ProductVariant; // Added selectedVariant
 }
 
 export interface Order {
