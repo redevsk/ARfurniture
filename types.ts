@@ -114,3 +114,10 @@ export interface DbAdmin {
   password: string;
   role: AdminRole;
 }
+
+export interface DashboardStats {
+  totalProducts: number;
+  pendingOrders: number;
+  activeCustomers: number;
+  monthlyRevenue: number;
+}

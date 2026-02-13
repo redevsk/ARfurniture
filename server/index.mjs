@@ -1073,3 +1073,46 @@ app.delete('/api/banners/:id', async (req, res) => {
 })
 
 const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+// =====================
+// DASHBOARD STATS API
+// =====================
+
+app.get('/api/admin/dashboard-stats', async (req, res) => {
+  try {
+    const totalProducts = await products.countDocuments({})
+    const pendingOrders = await orders.countDocuments({ status: 'pending' })
+    const activeCustomers = await users.countDocuments({}) // Count all users for now
+
+    // Calculate monthly revenue
+    const now = new Date()
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+
+    const revenueResult = await orders.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: firstDayOfMonth },
+          status: { $ne: 'cancelled' }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$totalAmount' }
+        }
+      }
+    ]).toArray()
+
+    const monthlyRevenue = revenueResult.length > 0 ? revenueResult[0].total : 0
+
+    return res.json({
+      totalProducts,
+      pendingOrders,
+      activeCustomers,
+      monthlyRevenue
+    })
+  } catch (e) {
+    console.error('Get dashboard stats error:', e)
+    return res.status(500).json({ error: 'Internal error' })
+  }
+})

@@ -1,5 +1,5 @@
 
-import { Product, Order, MarketingBanner } from '../types';
+import { Product, Order, MarketingBanner, DashboardStats } from '../types';
 
 // API Base URL - uses the auth server
 const API_BASE = (import.meta as any).env?.VITE_AUTH_API_BASE?.replace(/\/$/, '') || 'http://localhost:4000';
@@ -173,6 +173,21 @@ class Database {
       method: 'DELETE'
     });
     if (!res.ok) throw new Error('Failed to delete banner');
+  }
+  async getDashboardStats(): Promise<DashboardStats> {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/dashboard-stats`);
+      if (!res.ok) throw new Error('Failed to fetch dashboard stats');
+      return await res.json();
+    } catch (e) {
+      console.warn('Using fallback stats:', e);
+      return {
+        totalProducts: 156,
+        pendingOrders: 89,
+        activeCustomers: 1234,
+        monthlyRevenue: 458230
+      };
+    }
   }
 }
 

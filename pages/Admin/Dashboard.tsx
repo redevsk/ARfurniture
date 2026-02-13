@@ -1,9 +1,25 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../App';
 import { Package, ShoppingCart, TrendingUp, Users } from 'lucide-react';
+import { db } from '../../services/db';
+import { DashboardStats } from '../../types';
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      const data = await db.getDashboardStats();
+      setStats(data);
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
@@ -20,7 +36,7 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <span className="text-xs font-medium text-green-600">+12%</span>
           </div>
-          <h3 className="text-2xl font-bold text-slate-900 mb-1">156</h3>
+          <h3 className="text-2xl font-bold text-slate-900 mb-1">{stats?.totalProducts || 0}</h3>
           <p className="text-sm text-slate-500">Total Products</p>
         </div>
 
@@ -31,7 +47,7 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <span className="text-xs font-medium text-green-600">+8%</span>
           </div>
-          <h3 className="text-2xl font-bold text-slate-900 mb-1">89</h3>
+          <h3 className="text-2xl font-bold text-slate-900 mb-1">{stats?.pendingOrders || 0}</h3>
           <p className="text-sm text-slate-500">Pending Orders</p>
         </div>
 
@@ -42,7 +58,7 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <span className="text-xs font-medium text-green-600">+23%</span>
           </div>
-          <h3 className="text-2xl font-bold text-slate-900 mb-1">₱458,230</h3>
+          <h3 className="text-2xl font-bold text-slate-900 mb-1">₱{stats?.monthlyRevenue.toLocaleString() || '0'}</h3>
           <p className="text-sm text-slate-500">Monthly Revenue</p>
         </div>
 
@@ -53,7 +69,7 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <span className="text-xs font-medium text-green-600">+5%</span>
           </div>
-          <h3 className="text-2xl font-bold text-slate-900 mb-1">1,234</h3>
+          <h3 className="text-2xl font-bold text-slate-900 mb-1">{stats?.activeCustomers.toLocaleString() || '0'}</h3>
           <p className="text-sm text-slate-500">Active Customers</p>
         </div>
       </div>
