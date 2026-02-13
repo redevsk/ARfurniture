@@ -1,6 +1,7 @@
 import React, { useState, useContext, createContext, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import ScrollToTop from './components/ScrollToTop';
 import { Shop } from './pages/Customer/Shop';
 import { ProductDetail } from './pages/Customer/ProductDetail';
 import { Cart } from './pages/Customer/Cart';
@@ -187,6 +188,7 @@ const App: React.FC = () => {
     }}>
       <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart }}>
         <Router>
+          <ScrollToTop />
           <AppRoutes />
         </Router>
       </CartContext.Provider>
