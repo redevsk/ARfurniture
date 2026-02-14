@@ -1,5 +1,5 @@
 
-import { Product, Order, MarketingBanner, DashboardStats } from '../types';
+import { Product, Order, MarketingBanner, DashboardStats, CartItem } from '../types';
 
 // API Base URL - uses the auth server
 const API_BASE = (import.meta as any).env?.VITE_AUTH_API_BASE?.replace(/\/$/, '') || 'http://localhost:4000';
@@ -174,6 +174,55 @@ class Database {
     });
     if (!res.ok) throw new Error('Failed to delete banner');
   }
+
+  // =====================
+  // CART
+  // =====================
+  async getCart(userId: string): Promise<CartItem[]> {
+    try {
+      const res = await fetch(`${API_BASE}/api/cart/${userId}`);
+      if (!res.ok) throw new Error('Failed to fetch cart');
+      const data = await res.json();
+      return data.items || [];
+    } catch (e) {
+      console.warn('Failed to fetch cart:', e);
+      return [];
+    }
+  }
+
+  async addToCart(userId: string, productId: string, variantId?: string, quantity: number = 1): Promise<void> {
+    const res = await fetch(`${API_BASE}/api/cart/${userId}/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productId, variantId, quantity })
+    });
+    if (!res.ok) throw new Error('Failed to add item to cart');
+  }
+
+  async updateCartItem(userId: string, productId: string, quantity: number, variantId?: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/api/cart/${userId}/items/${productId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity, variantId })
+    });
+    if (!res.ok) throw new Error('Failed to update cart item');
+  }
+
+  async removeFromCart(userId: string, productId: string, variantId?: string): Promise<void> {
+    const url = variantId 
+      ? `${API_BASE}/api/cart/${userId}/items/${productId}?variantId=${encodeURIComponent(variantId)}`
+      : `${API_BASE}/api/cart/${userId}/items/${productId}`;
+    const res = await fetch(url, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to remove item from cart');
+  }
+
+  async clearCart(userId: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/api/cart/${userId}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to clear cart');
+  }
+
   async getDashboardStats(): Promise<DashboardStats> {
     try {
       const res = await fetch(`${API_BASE}/api/admin/dashboard-stats`);

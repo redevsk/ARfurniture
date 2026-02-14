@@ -13,6 +13,7 @@ import { MarketingManager } from './pages/Admin/MarketingManager';
 import { AdminLogin } from './pages/Admin/AdminLogin.tsx';
 import { UserRole, CartItem, Product, User, Address, ProductVariant } from './types';
 import { loginUser, registerUser, updateUserAddress, loginAdmin } from './services/auth';
+import { db } from './services/db';
 
 // --- Context Definitions ---
 
@@ -37,10 +38,10 @@ export const useAuth = () => {
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: Product, variant?: ProductVariant) => void;
-  removeFromCart: (id: string, variantId?: string) => void;
-  updateQuantity: (id: string, delta: number, variantId?: string) => void;
-  clearCart: () => void;
+  addToCart: (product: Product, variant?: ProductVariant) => Promise<void>;
+  removeFromCart: (id: string, variantId?: string) => Promise<void>;
+  updateQuantity: (id: string, delta: number, variantId?: string) => Promise<void>;
+  clearCart: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -113,6 +114,13 @@ const App: React.FC = () => {
   const handleUserLogin = async (email: string, pass: string) => {
     const customer = await loginUser(email, pass);
     setUser(customer);
+    // Load cart from database after login
+    try {
+      const userCart = await db.getCart(customer._id);
+      setCart(userCart);
+    } catch (error) {
+      console.error('Failed to load cart:', error);
+    }
     return customer;
   };
 
@@ -126,12 +134,19 @@ const App: React.FC = () => {
   const handleSignup = async (fname: string, lname: string, email: string, pass: string, mname = '') => {
     const user = await registerUser(fname, lname, email, pass, mname);
     setUser(user);
+    // Load cart from database after signup (will be empty for new users)
+    try {
+      const userCart = await db.getCart(user._id);
+      setCart(userCart);
+    } catch (error) {
+      console.error('Failed to load cart:', error);
+    }
     return user;
   };
 
   const handleLogout = () => {
     setUser(null);
-    setCart([]); // Optional: clear cart on logout
+    setCart([]); // Clear cart on logout
   };
 
   const handleUpdateAddress = async (address: Address) => {
@@ -141,39 +156,84 @@ const App: React.FC = () => {
     }
   };
 
-  // Cart Handlers
-  const addToCart = (product: Product, variant?: ProductVariant) => {
-    setCart(prev => {
-      const existing = prev.find(item =>
-        item._id === product._id &&
-        (variant ? item.selectedVariant?.id === variant.id : !item.selectedVariant)
-      );
+  // Cart Handlers - Require authentication
+  const addToCart = async (product: Product, variant?: ProductVariant) => {
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
 
-      if (existing) {
-        return prev.map(item =>
-          (item._id === product._id && (variant ? item.selectedVariant?.id === variant.id : !item.selectedVariant))
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
+    try {
+      await db.addToCart(user._id, product._id, variant?.id, 1);
+      // Update local state
+      setCart(prev => {
+        const existing = prev.find(item =>
+          item._id === product._id &&
+          (variant ? item.selectedVariant?.id === variant.id : !item.selectedVariant)
         );
-      }
-      return [...prev, { ...product, quantity: 1, selectedVariant: variant }];
-    });
+
+        if (existing) {
+          return prev.map(item =>
+            (item._id === product._id && (variant ? item.selectedVariant?.id === variant.id : !item.selectedVariant))
+              ? { ...item, quantity: item.quantity + 1 }
+              : item
+          );
+        }
+        return [...prev, { ...product, quantity: 1, selectedVariant: variant }];
+      });
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+      alert('Failed to add item to cart. Please try again.');
+    }
   };
 
-  const removeFromCart = (id: string, variantId?: string) => {
-    setCart(prev => prev.filter(item => !(item._id === id && (variantId ? item.selectedVariant?.id === variantId : !item.selectedVariant))));
+  const removeFromCart = async (id: string, variantId?: string) => {
+    if (!user) return;
+
+    try {
+      await db.removeFromCart(user._id, id, variantId);
+      // Update local state
+      setCart(prev => prev.filter(item => !(item._id === id && (variantId ? item.selectedVariant?.id === variantId : !item.selectedVariant))));
+    } catch (error) {
+      console.error('Failed to remove from cart:', error);
+      alert('Failed to remove item from cart. Please try again.');
+    }
   };
 
-  const updateQuantity = (id: string, delta: number, variantId?: string) => {
-    setCart(prev => prev.map(item => {
-      if (item._id === id && (variantId ? item.selectedVariant?.id === variantId : !item.selectedVariant)) {
-        return { ...item, quantity: Math.max(1, item.quantity + delta) };
-      }
-      return item;
-    }));
+  const updateQuantity = async (id: string, delta: number, variantId?: string) => {
+    if (!user) return;
+
+    const item = cart.find(i => i._id === id && (variantId ? i.selectedVariant?.id === variantId : !i.selectedVariant));
+    if (!item) return;
+
+    const newQuantity = Math.max(1, item.quantity + delta);
+
+    try {
+      await db.updateCartItem(user._id, id, newQuantity, variantId);
+      // Update local state
+      setCart(prev => prev.map(item => {
+        if (item._id === id && (variantId ? item.selectedVariant?.id === variantId : !item.selectedVariant)) {
+          return { ...item, quantity: newQuantity };
+        }
+        return item;
+      }));
+    } catch (error) {
+      console.error('Failed to update quantity:', error);
+      alert('Failed to update quantity. Please try again.');
+    }
   };
 
-  const clearCart = () => setCart([]);
+  const clearCart = async () => {
+    if (!user) return;
+
+    try {
+      await db.clearCart(user._id);
+      setCart([]);
+    } catch (error) {
+      console.error('Failed to clear cart:', error);
+      alert('Failed to clear cart. Please try again.');
+    }
+  };
 
   return (
     <AuthContext.Provider value={{

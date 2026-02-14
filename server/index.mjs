@@ -19,6 +19,7 @@ import uploadRoutes from './routes/uploads.mjs'
 import orderRoutes from './routes/orders.mjs'
 import bannerRoutes from './routes/banners.mjs'
 import adminRoutes from './routes/admin.mjs'
+import cartRoutes from './routes/cart.mjs'
 
 // Utilities
 import logger from './utils/logger.mjs'
@@ -119,6 +120,7 @@ app.get('/', (req, res) => {
       banners: '/api/banners',
       uploads: '/api/upload',
       admin: '/api/admin',
+      cart: '/api/cart',
       health: '/health'
     }
   })
@@ -134,6 +136,7 @@ app.use('/api/upload', uploadRoutes)
 app.use('/api/orders', orderRoutes)
 app.use('/api/banners', bannerRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/cart', cartRoutes)
 
 // =====================
 // ERROR HANDLING
@@ -173,5 +176,10 @@ app.listen(port, () => {
   logger.info('  - PUT    /api/banners/:id')
   logger.info('  - DELETE /api/banners/:id')
   logger.info('  - GET    /api/admin/dashboard-stats')
+  logger.info('  - GET    /api/cart/:userId')
+  logger.info('  - POST   /api/cart/:userId/items')
+  logger.info('  - PUT    /api/cart/:userId/items/:productId')
+  logger.info('  - DELETE /api/cart/:userId/items/:productId')
+  logger.info('  - DELETE /api/cart/:userId')
   logger.info('  - GET    /health')
 })
