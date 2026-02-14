@@ -23,7 +23,7 @@ const parseResponse = async (res: Response) => {
 
 // Forgot Password - Request reset code
 export const requestPasswordReset = async (email: string): Promise<{ success: boolean; resetToken?: string; message: string }> => {
-  const res = await fetch(`${AUTH_API_BASE}/api/forgot-password`, {
+  const res = await fetch(`${AUTH_API_BASE}/api/auth/forgot-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: email.trim() })
@@ -33,7 +33,7 @@ export const requestPasswordReset = async (email: string): Promise<{ success: bo
 
 // Forgot Password - Verify reset code
 export const verifyResetCode = async (resetToken: string, code: string): Promise<{ success: boolean; message: string }> => {
-  const res = await fetch(`${AUTH_API_BASE}/api/forgot-password/verify-code`, {
+  const res = await fetch(`${AUTH_API_BASE}/api/auth/forgot-password/verify-code`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ resetToken, code })
@@ -43,7 +43,7 @@ export const verifyResetCode = async (resetToken: string, code: string): Promise
 
 // Forgot Password - Reset password
 export const resetPassword = async (resetToken: string, code: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
-  const res = await fetch(`${AUTH_API_BASE}/api/forgot-password/reset-password`, {
+  const res = await fetch(`${AUTH_API_BASE}/api/auth/forgot-password/reset-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ resetToken, code, newPassword })
@@ -81,10 +81,10 @@ export const loginUser = async (email: string, password: string): Promise<User> 
 // Admin Login - separate function, doesn't fallback
 export const loginAdmin = async (identifier: string, password: string): Promise<User> => {
   console.log('→ Attempting admin login for:', identifier);
-  console.log('→ Calling:', `${AUTH_API_BASE}/api/admins/login`);
+  console.log('→ Calling:', `${AUTH_API_BASE}/api/auth/admins/login`);
   
   try {
-    const res = await fetch(`${AUTH_API_BASE}/api/admins/login`, {
+    const res = await fetch(`${AUTH_API_BASE}/api/auth/admins/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ identifier: identifier.trim(), password })
