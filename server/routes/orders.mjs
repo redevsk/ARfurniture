@@ -115,7 +115,7 @@ router.post('/', asyncHandler(async (req, res) => {
   for (const update of stockUpdates) {
     if (update.variantId) {
       // Update variant stock
-      await products.updateOne(
+      const updateResult = await products.updateOne(
         { 
           _id: update.productId,
           'variants.id': update.variantId
@@ -124,22 +124,26 @@ router.post('/', asyncHandler(async (req, res) => {
           $inc: { 'variants.$.stock': -update.quantity }
         }
       )
-      logger.debug('Reduced variant stock', { 
+      logger.info('Variant stock update result', { 
         requestId: req.requestId,
         productId: update.productId.toString(),
         variantId: update.variantId,
-        reducedBy: update.quantity
+        reducedBy: update.quantity,
+        matchedCount: updateResult.matchedCount,
+        modifiedCount: updateResult.modifiedCount
       })
     } else {
       // Update product stock
-      await products.updateOne(
+      const updateResult = await products.updateOne(
         { _id: update.productId },
         { $inc: { stock: -update.quantity } }
       )
-      logger.debug('Reduced product stock', { 
+      logger.info('Product stock update result', { 
         requestId: req.requestId,
         productId: update.productId.toString(),
-        reducedBy: update.quantity
+        reducedBy: update.quantity,
+        matchedCount: updateResult.matchedCount,
+        modifiedCount: updateResult.modifiedCount
       })
     }
   }
