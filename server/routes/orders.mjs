@@ -28,24 +28,127 @@ router.post('/', asyncHandler(async (req, res) => {
   logger.request(req, 'Creating new order')
   logger.debug('Order data', { 
     requestId: req.requestId,
-    customerEmail: req.body.customerEmail,
+    userId: req.body.userId,
     itemCount: req.body.items?.length,
     totalAmount: req.body.totalAmount
   })
   
+  const orders = req.app.locals.collections.orders
+  const products = req.app.locals.collections.products
+  
+  // Validate stock availability and prepare stock updates
+  const stockUpdates = []
+  
+  for (const item of req.body.items) {
+    const product = await products.findOne({ _id: new ObjectId(item.productId) })
+    
+    if (!product) {
+      logger.warn('Product not found in order', { requestId: req.requestId, productId: item.productId })
+      return res.status(400).json({ 
+        error: `Product ${item.productName} is no longer available` 
+      })
+    }
+    
+    // Check stock - variant-specific or product-level
+    if (item.variantId) {
+      const variant = product.variants?.find(v => v.id === item.variantId)
+      if (!variant) {
+        logger.warn('Variant not found in order', { requestId: req.requestId, variantId: item.variantId })
+        return res.status(400).json({ 
+          error: `Variant ${item.variantName} is no longer available` 
+        })
+      }
+      
+      const variantStock = variant.stock || 0
+      if (variantStock < item.quantity) {
+        logger.warn('Insufficient variant stock', { 
+          requestId: req.requestId, 
+          variantId: item.variantId,
+          requested: item.quantity,
+          available: variantStock
+        })
+        return res.status(400).json({ 
+          error: `Insufficient stock for ${item.productName} (${item.variantName}). Only ${variantStock} available.` 
+        })
+      }
+      
+      // Prepare variant stock update
+      stockUpdates.push({
+        productId: new ObjectId(item.productId),
+        variantId: item.variantId,
+        quantity: item.quantity
+      })
+    } else {
+      // Product-level stock check
+      const productStock = product.stock || 0
+      if (productStock < item.quantity) {
+        logger.warn('Insufficient product stock', { 
+          requestId: req.requestId, 
+          productId: item.productId,
+          requested: item.quantity,
+          available: productStock
+        })
+        return res.status(400).json({ 
+          error: `Insufficient stock for ${item.productName}. Only ${productStock} available.` 
+        })
+      }
+      
+      // Prepare product stock update
+      stockUpdates.push({
+        productId: new ObjectId(item.productId),
+        variantId: null,
+        quantity: item.quantity
+      })
+    }
+  }
+  
+  // All stock validations passed, create order
   const orderData = {
     ...req.body,
     status: 'pending',
     createdAt: new Date()
   }
   
-  const orders = req.app.locals.collections.orders
   const result = await orders.insertOne(orderData)
+  
+  // Reduce stock for each item
+  for (const update of stockUpdates) {
+    if (update.variantId) {
+      // Update variant stock
+      await products.updateOne(
+        { 
+          _id: update.productId,
+          'variants.id': update.variantId
+        },
+        { 
+          $inc: { 'variants.$.stock': -update.quantity }
+        }
+      )
+      logger.debug('Reduced variant stock', { 
+        requestId: req.requestId,
+        productId: update.productId.toString(),
+        variantId: update.variantId,
+        reducedBy: update.quantity
+      })
+    } else {
+      // Update product stock
+      await products.updateOne(
+        { _id: update.productId },
+        { $inc: { stock: -update.quantity } }
+      )
+      logger.debug('Reduced product stock', { 
+        requestId: req.requestId,
+        productId: update.productId.toString(),
+        reducedBy: update.quantity
+      })
+    }
+  }
   
   logger.success(`Order created: ${result.insertedId}`, { 
     requestId: req.requestId,
     orderId: result.insertedId.toString(),
-    status: 'pending'
+    status: 'pending',
+    itemCount: req.body.items.length
   })
   
   return res.json({ ...orderData, _id: result.insertedId.toString() })

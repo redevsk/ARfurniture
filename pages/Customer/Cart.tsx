@@ -103,12 +103,24 @@ export const Cart: React.FC = () => {
         if (!user) return;
         setIsSubmitting(true);
         try {
+            // Transform cart items to lightweight order items
+            const orderItems = cartItemsToCheckout.map(item => ({
+                productId: item._id,
+                productName: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                imageUrl: item.imageUrl,
+                category: item.category,
+                variantId: item.selectedVariant?.id,
+                variantName: item.selectedVariant?.name
+            }));
+
             await db.createOrder({
                 userId: user._id,
                 customerName: user.name,
                 recipientName: checkoutForm.recipientName,
                 contactNumber: checkoutForm.contactNumber,
-                items: cartItemsToCheckout,
+                items: orderItems,
                 totalAmount: total,
                 shippingAddress: {
                     street: checkoutForm.street,
@@ -126,8 +138,10 @@ export const Cart: React.FC = () => {
                 setOrderSuccess(false);
                 setIsCheckoutModalOpen(false);
             }, 3000);
-        } catch (error) {
-            alert("Failed to place order. Please try again.");
+        } catch (error: any) {
+            console.error('Order creation error:', error);
+            const errorMessage = error?.response?.data?.error || error?.message || "Failed to place order. Please try again.";
+            alert(errorMessage);
         } finally {
             setIsSubmitting(false);
         }

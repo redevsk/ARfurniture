@@ -5,7 +5,7 @@ import { ShoppingCart, Box, Wand2, Send, Smartphone, Truck, RefreshCw, ShieldChe
 import { Product, ProductVariant } from '../../types';
 import { db } from '../../services/db';
 import { askProductAssistant } from '../../services/gemini';
-import { useCart } from '../../App';
+import { useCart, useAuth } from '../../App';
 import { ModelViewerWrapper } from '../../components/ModelViewerWrapper';
 import { QRCodeModal } from '../../components/QRCodeModal';
 import { CURRENCY, resolveAssetUrl } from '../../constants';
@@ -28,6 +28,7 @@ export const ProductDetail: React.FC = () => {
 
   // Cart & Modal State
   const { addToCart } = useCart();
+  const { user } = useAuth();
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
@@ -112,11 +113,14 @@ export const ProductDetail: React.FC = () => {
     setIsChatting(false);
   }
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (product) {
-      addToCart(product, selectedVariant);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
+      await addToCart(product, selectedVariant);
+      // Only show toast if user is logged in (addToCart returns early if not)
+      if (user) {
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+      }
     }
   };
 

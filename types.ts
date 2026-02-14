@@ -60,13 +60,24 @@ export interface CartItem extends Product {
   selectedVariant?: ProductVariant; // Added selectedVariant
 }
 
+export interface OrderItem {
+  productId: string;
+  productName: string;
+  price: number;
+  quantity: number;
+  imageUrl: string;
+  category: string;
+  variantId?: string;
+  variantName?: string;
+}
+
 export interface Order {
   _id: string;
   userId: string;
   customerName: string;
   recipientName: string;     // Added
   contactNumber: string;     // Added
-  items: CartItem[];
+  items: OrderItem[];
   totalAmount: number;
   shippingAddress?: Address;
   status: 'pending' | 'shipped' | 'delivered' | 'cancelled';

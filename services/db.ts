@@ -1,5 +1,5 @@
 
-import { Product, Order, MarketingBanner, DashboardStats, CartItem } from '../types';
+import { Product, Order, MarketingBanner, DashboardStats, CartItem, OrderItem } from '../types';
 
 // API Base URL - uses the auth server
 const API_BASE = (import.meta as any).env?.VITE_AUTH_API_BASE?.replace(/\/$/, '') || 'http://localhost:4000';
@@ -120,7 +120,14 @@ class Database {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(order)
     });
-    if (!res.ok) throw new Error('Failed to create order');
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: 'Failed to create order' }));
+      const error: any = new Error(errorData.error || 'Failed to create order');
+      error.response = { data: errorData };
+      throw error;
+    }
+    
     const data = await res.json();
     return { ...data, createdAt: new Date(data.createdAt) };
   }
