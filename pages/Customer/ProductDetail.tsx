@@ -247,7 +247,18 @@ export const ProductDetail: React.FC = () => {
           <div className="mb-auto">
             <span className="text-indigo-600 font-medium text-sm tracking-wider uppercase">{product.category}</span>
             <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mt-2 mb-2">{product.name}</h1>
-            <div className="text-4xl font-bold text-slate-900 mb-8">{CURRENCY}{product.price.toLocaleString()}</div>
+            <div className="flex items-center justify-between mb-8">
+              <div className="text-4xl font-bold text-slate-900">{CURRENCY}{product.price.toLocaleString()}</div>
+              <div className={`text-sm font-medium px-3 py-1 rounded-full ${
+                (selectedVariant?.stock ?? product.stock) > 0 
+                  ? 'bg-slate-100 text-slate-600' 
+                  : 'bg-red-50 text-red-600'
+              }`}>
+                {(selectedVariant?.stock ?? product.stock) > 0 
+                  ? `${selectedVariant?.stock ?? product.stock} available` 
+                  : 'Out of Stock'}
+              </div>
+            </div>
 
             {/* Variant Selector */}
             <div className="mb-8">

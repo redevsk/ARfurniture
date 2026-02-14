@@ -34,6 +34,9 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => (
       <h3 className="font-bold text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors line-clamp-1">{product.name}</h3>
       <div className="mt-auto pt-2 flex items-center justify-between">
           <p className="text-lg font-semibold text-slate-900">{CURRENCY}{product.price.toLocaleString()}</p>
+          <p className={`text-xs font-medium ${product.stock > 0 ? 'text-slate-500' : 'text-red-500'}`}>
+            {product.stock > 0 ? `${product.stock} in stock` : 'Out of Stock'}
+          </p>
       </div>
     </div>
   </Link>
