@@ -194,8 +194,86 @@ router.patch('/:id/status',
   })
 )
 
+// Get orders by user ID
+router.get('/user/:userId', 
+  asyncHandler(async (req, res) => {
+    // Note: userId might not be an ObjectId in some auth systems, but here we assume string/external ID
+    // If it needs to be ObjectId, use validateObjectId middleware. 
+    // Given the schema Uses userId: string, we don't force ObjectId validation on the param itself if it's external.
+    // However, if your system uses MongoDB _id as userId, then validate it.
+    // Based on registerUser in auth.ts, _id is used. Let's assume it's a string from the auth provider or mongo _id.
+    
+    logger.request(req, `Fetching orders for user: ${req.params.userId}`)
+    
+    const orders = req.app.locals.collections.orders
+    const userOrders = await orders.find({ userId: req.params.userId }).sort({ createdAt: -1 }).toArray()
+    
+    const normalized = userOrders.map(o => ({
+      ...o,
+      _id: o._id.toString(),
+      createdAt: o.createdAt ? new Date(o.createdAt) : new Date()
+    }))
+    
+    logger.success(`Retrieved ${normalized.length} orders for user ${req.params.userId}`, { 
+      requestId: req.requestId, 
+      userId: req.params.userId,
+      count: normalized.length 
+    })
+    return res.json(normalized)
+  })
+)
 
-
+// Cancel order (only if pending)
+router.patch('/:id/cancel',
+  validateObjectId('id'),
+  asyncHandler(async (req, res) => {
+    logger.request(req, `Cancelling order: ${req.params.id}`)
+    
+    const orders = req.app.locals.collections.orders
+    const products = req.app.locals.collections.products
+    
+    const order = await orders.findOne({ _id: new ObjectId(req.params.id) })
+    
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' })
+    }
+    
+    if (order.status !== 'pending') {
+      return res.status(400).json({ 
+        error: `Cannot cancel order with status '${order.status}'. Only pending orders can be cancelled.` 
+      })
+    }
+    
+    // update status
+    await orders.updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: { status: 'cancelled', updatedAt: new Date() } }
+    )
+    
+    // Return items to stock
+    for (const item of order.items) {
+      if (item.variantId) {
+        await products.updateOne(
+          { 
+            _id: new ObjectId(item.productId),
+            'variants.id': item.variantId
+          },
+          { 
+            $inc: { 'variants.$.stock': item.quantity }
+          }
+        )
+      } else {
+        await products.updateOne(
+          { _id: new ObjectId(item.productId) },
+          { $inc: { stock: item.quantity } }
+        )
+      }
+    }
+    
+    logger.success(`Order cancelled: ${req.params.id}`, { requestId: req.requestId })
+    return res.json({ success: true, message: 'Order cancelled successfully' })
+  })
+)
 // Get single order
 router.get('/:id', 
   validateObjectId('id'),

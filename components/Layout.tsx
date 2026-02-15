@@ -151,6 +151,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                           >
                              <UserIcon className="w-4 h-4" /> Profile
                           </Link>
+                          <Link 
+                            to="/orders" 
+                            className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                          >
+                             <ShoppingBag className="w-4 h-4" /> My Orders
+                          </Link>
                           <button 
                             onClick={logout} 
                             className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md flex items-center gap-2"

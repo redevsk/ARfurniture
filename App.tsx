@@ -7,6 +7,7 @@ import { ProductDetail } from './pages/Customer/ProductDetail';
 import { Cart } from './pages/Customer/Cart';
 import { About } from './pages/Customer/About';
 import { Profile } from './pages/Customer/Profile';
+import { Orders } from './pages/Customer/Orders';
 import { AdminDashboard } from './pages/Admin/Dashboard';
 import { ProductManager } from './pages/Admin/ProductManager';
 import { OrderManagement } from './pages/Admin/OrderManagement';
@@ -49,6 +50,9 @@ const AppRoutes: React.FC = () => {
             <Route path="/cart" element={<Cart />} />
             <Route path="/profile" element={
               user ? <Profile /> : <Navigate to="/" replace />
+            } />
+            <Route path="/orders" element={
+              user ? <Orders /> : <Navigate to="/" replace />
             } />
 
             {/* Admin Routes */}

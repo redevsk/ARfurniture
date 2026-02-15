@@ -160,6 +160,33 @@ class Database {
     if (!res.ok) throw new Error('Failed to delete order');
   }
 
+  async getOrdersByUserId(userId: string): Promise<Order[]> {
+    try {
+      const res = await fetch(`${API_BASE}/api/orders/user/${userId}`);
+      if (!res.ok) throw new Error('Failed to fetch user orders');
+      const data = await res.json();
+      return data.map((o: any) => ({
+        ...o,
+        createdAt: new Date(o.createdAt)
+      }));
+    } catch (e) {
+      console.warn('Failed to fetch user orders:', e);
+      return [];
+    }
+  }
+
+  async cancelOrder(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/api/orders/${id}/cancel`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: 'Failed to cancel order' }));
+      throw new Error(errorData.error || 'Failed to cancel order');
+    }
+  }
+
   // =====================
   // BANNERS
   // =====================
