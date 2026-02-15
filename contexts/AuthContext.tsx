@@ -8,6 +8,7 @@ export interface AuthContextType {
   signup: (fname: string, lname: string, email: string, pass: string, mname?: string) => Promise<User>;
   logout: () => void;
   updateAddress: (address: Address) => Promise<void>;
+  updateUser: (user: User) => void;
   isAuthModalOpen: boolean;
   setAuthModalOpen: (isOpen: boolean) => void;
 }

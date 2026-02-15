@@ -103,6 +103,10 @@ export interface User {
   email: string;
   role: UserRole;
   addresses: Address[];
+  fname?: string;
+  mname?: string;
+  lname?: string;
+  contactNumber?: string;
 }
 
 export interface DbUser {

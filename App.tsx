@@ -122,8 +122,12 @@ const App: React.FC = () => {
   const handleUpdateAddress = async (address: Address) => {
     if (user) {
       await updateUserAddress(user._id, address);
-      setUser({ ...user, address });
+      setUser({ ...user, addresses: user.addresses ? user.addresses.map(a => a.id === address.id ? address : a) : [address] });
     }
+  };
+
+  const handleUpdateUser = (updatedUser: User) => {
+    setUser(updatedUser);
   };
 
   // Cart Handlers - Require authentication
@@ -236,6 +240,7 @@ const App: React.FC = () => {
       signup: handleSignup,
       logout: handleLogout,
       updateAddress: handleUpdateAddress,
+      updateUser: handleUpdateUser,
       isAuthModalOpen,
       setAuthModalOpen
     }}>

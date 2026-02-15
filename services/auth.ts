@@ -71,7 +71,11 @@ export const loginUser = async (email: string, password: string): Promise<User> 
       name: fullName,
       email: data.email,
       role: (data.role as UserRole) || UserRole.USER,
-      addresses: data.addresses || []
+      addresses: data.addresses || [],
+      fname: data.fname,
+      mname: data.mname,
+      lname: data.lname,
+      contactNumber: data.contactNumber
     };
   } catch (error) {
     console.error('✗ Customer login error:', error);
@@ -129,7 +133,11 @@ export const registerUser = async (fname: string, lname: string, email: string, 
     name: fullName,
     email: data.email,
     role: (data.role as UserRole) || UserRole.USER,
-    addresses: data.addresses || []
+    addresses: data.addresses || [],
+    fname: data.fname,
+    mname: data.mname,
+    lname: data.lname,
+    contactNumber: data.contactNumber
   };
 };
 
@@ -152,7 +160,11 @@ export const updateUserProfile = async (
     name: fullName,
     email: updatedUser.email,
     role: (updatedUser.role as UserRole) || UserRole.USER,
-    addresses: updatedUser.addresses || []
+    addresses: updatedUser.addresses || [],
+    fname: updatedUser.fname,
+    mname: updatedUser.mname,
+    lname: updatedUser.lname,
+    contactNumber: updatedUser.contactNumber
   };
 };
 

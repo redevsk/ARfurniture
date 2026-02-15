@@ -7,7 +7,7 @@ import { User as UserIcon, Phone, Mail, Lock, Save, Loader2, ArrowLeft, MapPin }
 import { useNavigate } from 'react-router-dom';
 
 export const Profile: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -38,15 +38,13 @@ export const Profile: React.FC = () => {
       // The `normalizeUser` returns `fname`, `mname`, `lname` but they might not be in `User` type definition.
       // We should update User type or cast it.
       
-      const u = user as any; // Temporary cast to access hidden fields
-      
       setFormData(prev => ({
         ...prev,
-        fname: u.fname || '',
-        mname: u.mname || '',
-        lname: u.lname || '',
-        email: u.email || '',
-        contactNumber: u.contactNumber || ''
+        fname: user.fname || '',
+        mname: user.mname || '',
+        lname: user.lname || '',
+        email: user.email || '',
+        contactNumber: user.contactNumber || ''
       }));
     } else {
         navigate('/');
@@ -80,7 +78,7 @@ export const Profile: React.FC = () => {
     try {
         if (!user) return;
         
-        await updateUserProfile(user._id, {
+        const updatedUser = await updateUserProfile(user._id, {
             fname: formData.fname,
             mname: formData.mname,
             lname: formData.lname,
@@ -89,6 +87,9 @@ export const Profile: React.FC = () => {
             newPassword: formData.newPassword || undefined
         });
         
+        // Update global user state
+        updateUser(updatedUser);
+
         setSuccessMsg('Profile updated successfully!');
         setFormData(prev => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
     } catch (err: any) {
@@ -110,9 +111,9 @@ export const Profile: React.FC = () => {
           <h1 className="text-3xl font-bold text-slate-900">My Profile</h1>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
           {/* Left Column - Main Info */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-3 space-y-8">
               
               {/* Personal Information Form */}
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
@@ -231,14 +232,15 @@ export const Profile: React.FC = () => {
           </div>
           
           {/* Right Column - Address Manager */}
-          <div className="space-y-8">
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                  <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+          <div className="lg:col-span-2 space-y-8 flex flex-col">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col">
+                  <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2 flex-shrink-0">
                        <MapPin className="w-5 h-5 text-indigo-600" /> Address Book
                   </h2>
                   <AddressManager 
                       userId={user._id} 
                       onSelectAddress={() => {}} // No-op for profile view
+                      selectable={false}
                   />
               </div>
           </div>
