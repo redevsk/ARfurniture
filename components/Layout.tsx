@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { ShoppingBag, Menu, X, Hexagon, User as UserIcon, LogOut, LogIn, Search, Heart } from 'lucide-react';
 import { UserRole } from '../types';
 import { APP_NAME, NAV_ITEMS_ADMIN } from '../constants';
-import { useCart, useAuth } from '../App';
+import { useCart } from '../contexts/CartContext';
+import { useAuth } from '../contexts/AuthContext';
 import { AuthModal } from './AuthModal';
 
 interface LayoutProps {
@@ -116,6 +117,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                           <div className="px-4 py-2 text-xs text-slate-500 border-b border-slate-100 mb-1">
                               Signed in as <br/><strong className="text-slate-900">{user.email}</strong>
                           </div>
+                          <Link 
+                            to="/profile" 
+                            className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                          >
+                             <UserIcon className="w-4 h-4" /> Profile
+                          </Link>
                           <button 
                             onClick={logout} 
                             className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md flex items-center gap-2"

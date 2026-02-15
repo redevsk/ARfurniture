@@ -133,6 +133,30 @@ export const registerUser = async (fname: string, lname: string, email: string, 
   };
 };
 
+// Update User Profile
+export const updateUserProfile = async (
+  userId: string,
+  data: Partial<User> & { currentPassword?: string, newPassword?: string, contactNumber?: string, fname?: string, mname?: string, lname?: string }
+): Promise<User> => {
+  const res = await fetch(`${AUTH_API_BASE}/api/auth/update-profile`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, ...data })
+  });
+  
+  const updatedUser = await parseResponse(res);
+  const fullName = updatedUser.name || [updatedUser.fname, updatedUser.mname, updatedUser.lname].filter(Boolean).join(' ');
+  
+  return {
+    _id: updatedUser._id,
+    name: fullName,
+    email: updatedUser.email,
+    role: (updatedUser.role as UserRole) || UserRole.USER,
+    addresses: updatedUser.addresses || []
+  };
+};
+
 export const updateUserAddress = async (userId: string, address: Address): Promise<Address> => {
   return address;
 };
+

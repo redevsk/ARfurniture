@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Plus, Trash2, Check, X } from 'lucide-react';
+import { MapPin, Plus, Trash2, Check, X, Edit2 } from 'lucide-react';
 import { Address } from '../types';
-import { getAddresses, addAddress, deleteAddress } from '../services/address';
+import { getAddresses, addAddress, deleteAddress, updateAddress } from '../services/address';
 
 interface AddressManagerProps {
   userId: string;
@@ -13,9 +13,10 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [isEditing, setIsEditing] = useState<string | null>(null); // Track editing state
   const [error, setError] = useState<string | null>(null);
 
-  const [newAddress, setNewAddress] = useState<Omit<Address, 'id'>>({
+  const [addressForm, setAddressForm] = useState<Omit<Address, 'id'>>({
     street: '',
     city: '',
     state: '',
@@ -44,13 +45,22 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
     }
   };
 
-  const handleAddAddress = async (e: React.FormEvent | React.KeyboardEvent | React.MouseEvent) => {
+  const handleSaveAddress = async (e: React.FormEvent | React.KeyboardEvent | React.MouseEvent) => {
     e.preventDefault();
     try {
-      const added = await addAddress(userId, newAddress);
-      setAddresses([...addresses, added]);
-      setIsAdding(false);
-      setNewAddress({
+      if (isEditing) {
+        const updated = await updateAddress(userId, isEditing, addressForm);
+        setAddresses(addresses.map(a => a.id === isEditing ? updated : a));
+        setIsEditing(null);
+      } else {
+        const added = await addAddress(userId, addressForm);
+        setAddresses([...addresses, added]);
+        setIsAdding(false);
+        // Optionally auto-select the new address
+        onSelectAddress(added);
+      }
+      
+      setAddressForm({
         street: '',
         city: '',
         state: '',
@@ -58,12 +68,23 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
         country: 'Philippines',
         landmark: ''
       });
-      // Optionally auto-select the new address
-      onSelectAddress(added);
     } catch (err) {
-      console.error('Failed to add address', err);
-      setError('Failed to add address');
+      console.error('Failed to save address', err);
+      setError('Failed to save address');
     }
+  };
+
+  const startEditing = (addr: Address) => {
+      setAddressForm({
+          street: addr.street,
+          city: addr.city,
+          state: addr.state,
+          zipCode: addr.zipCode,
+          country: addr.country,
+          landmark: addr.landmark || ''
+      });
+      setIsEditing(addr.id || '');
+      setIsAdding(false);
   };
 
   const handleDeleteAddress = async (addressId: string) => {
@@ -78,6 +99,19 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
       console.error('Failed to delete address', err);
       setError('Failed to delete address');
     }
+  };
+
+  const cancelForm = () => {
+      setIsAdding(false);
+      setIsEditing(null);
+      setAddressForm({
+        street: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        country: 'Philippines',
+        landmark: ''
+      });
   };
 
   if (isLoading) return <div className="p-4 text-center text-slate-500">Loading addresses...</div>;
@@ -115,23 +149,34 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
                   </p>
                 )}
               </div>
-              <button 
-                onClick={(e) => { e.stopPropagation(); handleDeleteAddress(addr.id!); }}
-                className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              
+              <div className="flex gap-2">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); startEditing(addr); }}
+                    className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Edit Address"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleDeleteAddress(addr.id!); }}
+                    className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Delete Address"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+              </div>
             </div>
           </div>
         ))}
 
-        {addresses.length === 0 && !isAdding && (
+        {addresses.length === 0 && !isAdding && !isEditing && (
           <div className="text-center p-6 bg-slate-50 rounded-xl border border-dashed border-slate-300">
             <p className="text-slate-500 text-sm mb-3">No saved addresses found.</p>
           </div>
         )}
 
-        {!isAdding ? (
+        {!isAdding && !isEditing ? (
           <button 
             onClick={() => setIsAdding(true)}
             className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:border-indigo-500 hover:text-indigo-600 font-medium transition-colors flex items-center justify-center gap-2"
@@ -139,10 +184,10 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
             <Plus className="w-4 h-4" /> Add New Address
           </button>
         ) : (
-          <div onKeyDown={(e) => e.key === 'Enter' && handleAddAddress(e)} className="bg-slate-50 p-4 rounded-xl border border-slate-200 animate-in fade-in slide-in-from-top-2">
+          <div onKeyDown={(e) => e.key === 'Enter' && handleSaveAddress(e)} className="bg-slate-50 p-4 rounded-xl border border-slate-200 animate-in fade-in slide-in-from-top-2">
             <h4 className="font-bold text-slate-900 mb-4 flex items-center justify-between">
-              New Address
-              <button type="button" onClick={() => setIsAdding(false)} className="text-slate-400 hover:text-slate-600">
+              {isEditing ? 'Edit Address' : 'New Address'}
+              <button type="button" onClick={cancelForm} className="text-slate-400 hover:text-slate-600">
                 <X className="w-4 h-4" />
               </button>
             </h4>
@@ -153,8 +198,8 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
                   required
                   placeholder="Street Address"
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-sm"
-                  value={newAddress.street}
-                  onChange={e => setNewAddress({...newAddress, street: e.target.value})}
+                  value={addressForm.street}
+                  onChange={e => setAddressForm({...addressForm, street: e.target.value})}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -163,16 +208,16 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
                   required
                   placeholder="City"
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-sm"
-                  value={newAddress.city}
-                  onChange={e => setNewAddress({...newAddress, city: e.target.value})}
+                  value={addressForm.city}
+                  onChange={e => setAddressForm({...addressForm, city: e.target.value})}
                 />
                 <input
                   type="text"
                   required
                   placeholder="State/Province"
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-sm"
-                  value={newAddress.state}
-                  onChange={e => setNewAddress({...newAddress, state: e.target.value})}
+                  value={addressForm.state}
+                  onChange={e => setAddressForm({...addressForm, state: e.target.value})}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -181,16 +226,16 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
                   required
                   placeholder="ZIP Code"
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-sm"
-                  value={newAddress.zipCode}
-                  onChange={e => setNewAddress({...newAddress, zipCode: e.target.value})}
+                  value={addressForm.zipCode}
+                  onChange={e => setAddressForm({...addressForm, zipCode: e.target.value})}
                 />
                 <input
                   type="text"
                   required
                   placeholder="Country"
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-sm"
-                  value={newAddress.country}
-                  onChange={e => setNewAddress({...newAddress, country: e.target.value})}
+                  value={addressForm.country}
+                  onChange={e => setAddressForm({...addressForm, country: e.target.value})}
                 />
               </div>
               <div>
@@ -198,24 +243,24 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
                   type="text"
                   placeholder="Landmark (Optional)"
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-sm"
-                  value={newAddress.landmark}
-                  onChange={e => setNewAddress({...newAddress, landmark: e.target.value})}
+                  value={addressForm.landmark}
+                  onChange={e => setAddressForm({...addressForm, landmark: e.target.value})}
                 />
               </div>
               <div className="pt-2 flex justify-end gap-2">
                 <button 
                   type="button" 
-                  onClick={() => setIsAdding(false)}
+                  onClick={cancelForm}
                   className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-200 rounded-lg"
                 >
                   Cancel
                 </button>
                 <button 
                   type="button"
-                  onClick={(e) => handleAddAddress(e)}
+                  onClick={(e) => handleSaveAddress(e)}
                   className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
                 >
-                  Save Address
+                  {isEditing ? 'Update Address' : 'Save Address'}
                 </button>
               </div>
             </div>

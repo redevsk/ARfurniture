@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Trash2, ArrowRight, CreditCard, MapPin, Plus, Check, X, Phone, User, Home, CheckCircle, Edit, Minus } from 'lucide-react';
-import { useCart, useAuth } from '../../App';
+import { useCart } from '../../contexts/CartContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { Address, CartItem, ProductVariant } from '../../types';
 import { CURRENCY, resolveAssetUrl } from '../../constants';
 import { db } from '../../services/db';

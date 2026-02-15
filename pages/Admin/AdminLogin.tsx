@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useAuth } from '../../App'
+import { useAuth } from '../../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { Lock, User as UserIcon, ArrowRight } from 'lucide-react'
 

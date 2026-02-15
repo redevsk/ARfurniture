@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../App';
+import { useAuth } from '../../contexts/AuthContext';
 import { Package, ShoppingCart, TrendingUp, Users } from 'lucide-react';
 import { db } from '../../services/db';
 import { DashboardStats } from '../../types';

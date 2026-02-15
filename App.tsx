@@ -1,4 +1,4 @@
-import React, { useState, useContext, createContext, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
@@ -6,6 +6,7 @@ import { Shop } from './pages/Customer/Shop';
 import { ProductDetail } from './pages/Customer/ProductDetail';
 import { Cart } from './pages/Customer/Cart';
 import { About } from './pages/Customer/About';
+import { Profile } from './pages/Customer/Profile';
 import { AdminDashboard } from './pages/Admin/Dashboard';
 import { ProductManager } from './pages/Admin/ProductManager';
 import { OrderManagement } from './pages/Admin/OrderManagement';
@@ -14,44 +15,9 @@ import { AdminLogin } from './pages/Admin/AdminLogin.tsx';
 import { UserRole, CartItem, Product, User, Address, ProductVariant } from './types';
 import { loginUser, registerUser, updateUserAddress, loginAdmin } from './services/auth';
 import { db } from './services/db';
-
-// --- Context Definitions ---
-
-interface AuthContextType {
-  user: User | null;
-  userLogin: (email: string, pass: string) => Promise<User>;
-  adminLogin: (identifier: string, pass: string) => Promise<User>;
-  signup: (fname: string, lname: string, email: string, pass: string, mname?: string) => Promise<User>;
-  logout: () => void;
-  updateAddress: (address: Address) => Promise<void>;
-  isAuthModalOpen: boolean;
-  setAuthModalOpen: (isOpen: boolean) => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within an AuthProvider');
-  return context;
-};
-
-interface CartContextType {
-  cart: CartItem[];
-  addToCart: (product: Product, variant?: ProductVariant) => Promise<void>;
-  removeFromCart: (id: string, variantId?: string) => Promise<void>;
-  updateQuantity: (id: string, delta: number, variantId?: string) => Promise<void>;
-  clearCart: () => Promise<void>;
-  updateItemVariant: (product: Product, oldVariantId: string | undefined, newVariant: ProductVariant, quantity: number) => Promise<void>;
-}
-
-const CartContext = createContext<CartContextType | undefined>(undefined);
-
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (!context) throw new Error('useCart must be used within a CartProvider');
-  return context;
-};
+import { AuthContext } from './contexts/AuthContext';
+import { CartContext, useCart } from './contexts/CartContext';
+import { useAuth } from './contexts/AuthContext';
 
 // --- App Routes Wrapper Component ---
 const AppRoutes: React.FC = () => {
@@ -80,6 +46,9 @@ const AppRoutes: React.FC = () => {
             <Route path="/about" element={<About />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/cart" element={<Cart />} />
+            <Route path="/profile" element={
+              user ? <Profile /> : <Navigate to="/" replace />
+            } />
 
             {/* Admin Routes */}
             <Route path="/admin" element={

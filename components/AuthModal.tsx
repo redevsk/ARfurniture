@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Mail, Lock, User as UserIcon, ArrowRight, ArrowLeft, CheckCircle, KeyRound } from 'lucide-react';
-import { useAuth } from '../App';
+import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types';
 import { requestPasswordReset, verifyResetCode, resetPassword } from '../services/auth';
 

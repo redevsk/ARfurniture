@@ -5,7 +5,8 @@ import { ShoppingCart, Box, Wand2, Send, Smartphone, Truck, RefreshCw, ShieldChe
 import { Product, ProductVariant } from '../../types';
 import { db } from '../../services/db';
 import { askProductAssistant } from '../../services/gemini';
-import { useCart, useAuth } from '../../App';
+import { useCart } from '../../contexts/CartContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { ModelViewerWrapper } from '../../components/ModelViewerWrapper';
 import { QRCodeModal } from '../../components/QRCodeModal';
 import { CURRENCY, resolveAssetUrl } from '../../constants';
