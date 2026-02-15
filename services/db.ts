@@ -141,6 +141,25 @@ class Database {
     if (!res.ok) throw new Error('Failed to update order status');
   }
 
+  async getOrder(id: string): Promise<Order | undefined> {
+    try {
+      const res = await fetch(`${API_BASE}/api/orders/${id}`);
+      if (!res.ok) return undefined;
+      const data = await res.json();
+      return { ...data, createdAt: new Date(data.createdAt) };
+    } catch (e) {
+      console.warn('Failed to fetch order:', e);
+      return undefined;
+    }
+  }
+
+  async deleteOrder(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/api/orders/${id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Failed to delete order');
+  }
+
   // =====================
   // BANNERS
   // =====================

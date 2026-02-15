@@ -78,10 +78,11 @@ export interface Order {
   customerName: string;
   recipientName: string;     // Added
   contactNumber: string;     // Added
+  email?: string;            // Added
   items: OrderItem[];
   totalAmount: number;
   shippingAddress?: Address;
-  status: 'pending' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   createdAt: Date;
 }
 

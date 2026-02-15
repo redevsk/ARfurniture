@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { 
   Search, Filter, Eye, Truck, CheckCircle, Clock, XCircle, 
   MapPin, Package, Calendar, DollarSign, ChevronDown, ChevronUp,
-  AlertCircle, ArrowUpRight
+  AlertCircle, ArrowUpRight, Trash2
 } from 'lucide-react';
 import { Order, OrderItem } from '../../types';
 import { db } from '../../services/db';
@@ -40,6 +40,8 @@ export const OrderManagement: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
 
   useEffect(() => {
     fetchOrders();
@@ -81,9 +83,38 @@ export const OrderManagement: React.FC = () => {
     }
   };
 
-  const openDetails = (order: Order) => {
-    setSelectedOrder(order);
+  const handleDelete = async (orderId: string) => {
+    if (!window.confirm("Are you sure you want to delete this order? This action cannot be undone.")) return;
+
+    try {
+      await db.deleteOrder(orderId);
+      setOrders(orders.filter(o => o._id !== orderId));
+      if (selectedOrder?._id === orderId) {
+        setIsDetailsOpen(false);
+        setSelectedOrder(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete order:", error);
+      alert("Failed to delete order");
+    }
+  };
+
+  const openDetails = async (order: Order) => {
     setIsDetailsOpen(true);
+    setDetailsLoading(true);
+    // Show cached data first while loading
+    setSelectedOrder(order);
+    
+    try {
+      const freshOrder = await db.getOrder(order._id);
+      if (freshOrder) {
+        setSelectedOrder(freshOrder);
+      }
+    } catch (error) {
+      console.error("Failed to fetch fresh order details:", error);
+    } finally {
+      setDetailsLoading(false);
+    }
   };
 
   // Filter orders
@@ -184,15 +215,28 @@ export const OrderManagement: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button 
+                      <div className="flex justify-end gap-2">
+                        <button 
                         onClick={(e) => {
                           e.stopPropagation();
                           openDetails(order);
                         }}
                         className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        title="View Details"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(order._id);
+                        }}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete Order"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                     </td>
                   </tr>
                 ))
@@ -214,10 +258,22 @@ export const OrderManagement: React.FC = () => {
                 <span className="font-mono text-sm px-2 py-1 bg-slate-200 rounded text-slate-600">
                   #{selectedOrder._id.toUpperCase()}
                 </span>
+                {detailsLoading && (
+                  <span className="text-xs text-indigo-600 animate-pulse font-medium">Updating...</span>
+                )}
               </div>
-              <button onClick={() => setIsDetailsOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200 transition-colors">
-                <XCircle className="w-5 h-5" />
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => handleDelete(selectedOrder._id)}
+                  className="p-2 text-slate-400 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors"
+                  title="Delete Order"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+                <button onClick={() => setIsDetailsOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200 transition-colors">
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Modal Body */}
@@ -330,12 +386,12 @@ export const OrderManagement: React.FC = () => {
                           <div className="text-sm text-slate-500 mt-1">
                             {selectedOrder.shippingAddress ? (
                               <>
-                                {selectedOrder.shippingAddress.addressLine1}
-                                {selectedOrder.shippingAddress.addressLine2 && <><br />{selectedOrder.shippingAddress.addressLine2}</>}
+                                {selectedOrder.shippingAddress.street}
+                                {selectedOrder.shippingAddress.landmark && <><br />{selectedOrder.shippingAddress.landmark}</>}
                                 <br />
-                                {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.postalCode}
+                                {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.zipCode}
                                 <br />
-                                {selectedOrder.shippingAddress.country}
+                                {selectedOrder.shippingAddress.state}, {selectedOrder.shippingAddress.country}
                               </>
                             ) : (
                               <span className="italic text-slate-400">No address provided</span>
@@ -349,7 +405,7 @@ export const OrderManagement: React.FC = () => {
                           <span className="font-bold">@</span>
                         </div>
                         <div className="text-sm text-slate-600 break-all">
-                          {selectedOrder.shippingAddress?.email || (selectedOrder as any).email || 'No email provided'}
+                          {selectedOrder.email || (selectedOrder as any).email || 'No email provided'}
                         </div>
                       </div>
 
@@ -358,7 +414,7 @@ export const OrderManagement: React.FC = () => {
                           <span className="font-bold">#</span>
                         </div>
                         <div className="text-sm text-slate-600">
-                          {selectedOrder.shippingAddress?.phone || (selectedOrder as any).phone || 'No phone provided'}
+                          {selectedOrder.contactNumber || (selectedOrder as any).phone || 'No phone provided'}
                         </div>
                       </div>
                     </div>
@@ -380,9 +436,9 @@ export const OrderManagement: React.FC = () => {
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-slate-500">Payment</span>
-                        <span className="text-slate-900 font-medium capitalize">
-                          {selectedOrder.paymentMethod}
+                        <span className="text-slate-500">Status</span>
+                        <span className={`font-medium capitalize ${getStatusColor(selectedOrder.status).split(' ')[1]}`}>
+                          {selectedOrder.status}
                         </span>
                       </div>
                     </div>

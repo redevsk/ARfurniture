@@ -222,6 +222,7 @@ export const Cart: React.FC = () => {
             await db.createOrder({
                 userId: user._id,
                 customerName: user.name,
+                email: user.email,
                 recipientName: checkoutForm.recipientName,
                 contactNumber: checkoutForm.contactNumber,
                 items: orderItems,

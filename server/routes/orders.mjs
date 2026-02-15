@@ -194,4 +194,50 @@ router.patch('/:id/status',
   })
 )
 
+
+
+// Get single order
+router.get('/:id', 
+  validateObjectId('id'),
+  asyncHandler(async (req, res) => {
+    logger.request(req, `Fetching order: ${req.params.id}`)
+    
+    const orders = req.app.locals.collections.orders
+    const order = await orders.findOne({ _id: new ObjectId(req.params.id) })
+    
+    if (!order) {
+      logger.warn('Order not found', { requestId: req.requestId, orderId: req.params.id })
+      return res.status(404).json({ error: 'Order not found' })
+    }
+    
+    const normalized = {
+      ...order,
+      _id: order._id.toString(),
+      createdAt: order.createdAt ? new Date(order.createdAt) : new Date()
+    }
+    
+    logger.success(`Retrieved order: ${req.params.id}`, { requestId: req.requestId })
+    return res.json(normalized)
+  })
+)
+
+// Delete order
+router.delete('/:id',
+  validateObjectId('id'),
+  asyncHandler(async (req, res) => {
+    logger.request(req, `Deleting order: ${req.params.id}`)
+    
+    const orders = req.app.locals.collections.orders
+    const result = await orders.deleteOne({ _id: new ObjectId(req.params.id) })
+    
+    if (result.deletedCount === 0) {
+      logger.warn('Order not found for deletion', { requestId: req.requestId, orderId: req.params.id })
+      return res.status(404).json({ error: 'Order not found' })
+    }
+    
+    logger.success(`Order deleted: ${req.params.id}`, { requestId: req.requestId })
+    return res.json({ success: true, message: 'Order deleted successfully' })
+  })
+)
+
 export default router
