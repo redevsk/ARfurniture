@@ -119,7 +119,7 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
     <div className="h-full flex flex-col space-y-6">
       {error && <div className="text-red-500 text-sm p-2 bg-red-50 rounded">{error}</div>}
       
-      <div className="flex-1 overflow-y-auto pr-2 space-y-4 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto pr-2 space-y-4 custom-scrollbar max-h-[500px]">
         <div className="grid grid-cols-1 gap-4">
         {addresses.map(addr => (
           <div 
@@ -195,20 +195,21 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
           </div>
         )}
 
+      </div>
+
         <button 
           onClick={startAdding}
-          className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-500 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50/50 font-medium transition-all flex items-center justify-center gap-2 group min-h-[60px]"
+          className="w-full py-4 border-2 border-dashed border-slate-200 rounded-2xl text-slate-500 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50/50 font-medium transition-all flex items-center justify-center gap-2 group min-h-[60px] flex-shrink-0"
         >
           <div className="w-8 h-8 rounded-full bg-slate-100 group-hover:bg-indigo-100 text-slate-400 group-hover:text-indigo-600 flex items-center justify-center transition-colors">
             <Plus className="w-5 h-5" /> 
           </div>
           Add New Address
         </button>
-      </div>
 
       {/* Address Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200" style={{ margin: 0 }}>
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden relative animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
                 <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white flex-shrink-0">
                     <h3 className="text-lg font-bold text-slate-900">

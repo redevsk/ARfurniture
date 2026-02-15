@@ -111,12 +111,12 @@ export const Profile: React.FC = () => {
           <h1 className="text-3xl font-bold text-slate-900">My Profile</h1>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
           {/* Left Column - Main Info */}
-          <div className="lg:col-span-3 space-y-8">
+          <div className="lg:col-span-3 space-y-8 flex flex-col">
               
               {/* Personal Information Form */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
                   <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
                       <UserIcon className="w-5 h-5 text-indigo-600" /> Personal Information
                   </h2>
@@ -124,7 +124,7 @@ export const Profile: React.FC = () => {
                   {successMsg && <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm">{successMsg}</div>}
                   {errorMsg && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{errorMsg}</div>}
                   
-                  <form onSubmit={handleSubmit} className="space-y-4">
+                  <form onSubmit={handleSubmit} className="space-y-4 flex-1 flex flex-col">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
                               <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">First Name</label>
@@ -233,7 +233,7 @@ export const Profile: React.FC = () => {
           
           {/* Right Column - Address Manager */}
           <div className="lg:col-span-2 space-y-8 flex flex-col">
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
                   <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2 flex-shrink-0">
                        <MapPin className="w-5 h-5 text-indigo-600" /> Address Book
                   </h2>
