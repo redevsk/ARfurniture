@@ -91,7 +91,7 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
           <div 
             key={addr.id} 
             className={`
-              relative p-4 rounded-xl border-2 cursor-pointer transition-all
+              relative p-4 rounded-xl border-2 cursor-pointer transition-all group
               ${selectedAddressId === addr.id 
                 ? 'border-indigo-600 bg-indigo-50' 
                 : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'}
