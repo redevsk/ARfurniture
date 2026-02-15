@@ -70,7 +70,8 @@ export const loginUser = async (email: string, password: string): Promise<User> 
       _id: data._id,
       name: fullName,
       email: data.email,
-      role: (data.role as UserRole) || UserRole.USER
+      role: (data.role as UserRole) || UserRole.USER,
+      addresses: data.addresses || []
     };
   } catch (error) {
     console.error('✗ Customer login error:', error);
@@ -98,7 +99,8 @@ export const loginAdmin = async (identifier: string, password: string): Promise<
       _id: data._id,
       name: fullName || data.username || 'Admin',
       email: data.email,
-      role: UserRole.ADMIN
+      role: UserRole.ADMIN,
+      addresses: []
     };
   } catch (error) {
     console.error('✗ Admin login error:', error);
@@ -126,7 +128,8 @@ export const registerUser = async (fname: string, lname: string, email: string, 
     _id: data._id,
     name: fullName,
     email: data.email,
-    role: (data.role as UserRole) || UserRole.USER
+    role: (data.role as UserRole) || UserRole.USER,
+    addresses: data.addresses || []
   };
 };
 

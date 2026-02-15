@@ -19,6 +19,7 @@ export interface Dimensions {
 }
 
 export interface Address {
+  id?: string;
   street: string;
   city: string;
   state: string;
@@ -101,7 +102,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  address?: Address;
+  addresses: Address[];
 }
 
 export interface DbUser {
@@ -112,7 +113,7 @@ export interface DbUser {
   mname?: string;
   lname: string;
   contactNumber: string;
-  address: Address[];
+  addresses: Address[];
 }
 
 export interface DbAdmin {

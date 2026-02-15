@@ -47,7 +47,7 @@ router.post('/signup',
       mname: middle,
       lname: last,
       contactNumber: contactNumber.trim(),
-      address: []
+      addresses: []
     }
     
     const users = req.app.locals.collections.users

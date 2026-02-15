@@ -20,6 +20,7 @@ import orderRoutes from './routes/orders.mjs'
 import bannerRoutes from './routes/banners.mjs'
 import adminRoutes from './routes/admin.mjs'
 import cartRoutes from './routes/cart.mjs'
+import addressRoutes from './routes/address.mjs'
 
 // Utilities
 import logger from './utils/logger.mjs'
@@ -137,6 +138,7 @@ app.use('/api/orders', orderRoutes)
 app.use('/api/banners', bannerRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/cart', cartRoutes)
+app.use('/api/address', addressRoutes)
 
 // =====================
 // ERROR HANDLING
@@ -181,5 +183,9 @@ app.listen(port, () => {
   logger.info('  - PUT    /api/cart/:userId/items/:productId')
   logger.info('  - DELETE /api/cart/:userId/items/:productId')
   logger.info('  - DELETE /api/cart/:userId')
+  logger.info('  - GET    /api/address/:userId')
+  logger.info('  - POST   /api/address/:userId')
+  logger.info('  - PUT    /api/address/:userId/:addressId')
+  logger.info('  - DELETE /api/address/:userId/:addressId')
   logger.info('  - GET    /health')
 })

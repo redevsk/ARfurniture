@@ -9,7 +9,7 @@ export const normalizeUser = (doc = {}) => ({
   name: [doc.fname, doc.mname, doc.lname].filter(Boolean).join(' '),
   role: 'user',
   contactNumber: doc.contactNumber || '',
-  address: doc.address || []
+  addresses: doc.addresses || (Array.isArray(doc.address) ? doc.address : [])
 })
 
 export const normalizeAdmin = (doc = {}) => ({

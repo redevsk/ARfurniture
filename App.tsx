@@ -42,6 +42,7 @@ interface CartContextType {
   removeFromCart: (id: string, variantId?: string) => Promise<void>;
   updateQuantity: (id: string, delta: number, variantId?: string) => Promise<void>;
   clearCart: () => Promise<void>;
+  updateItemVariant: (product: Product, oldVariantId: string | undefined, newVariant: ProductVariant, quantity: number) => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -235,6 +236,29 @@ const App: React.FC = () => {
     }
   };
 
+  const updateItemVariant = async (product: Product, oldVariantId: string | undefined, newVariant: ProductVariant, quantity: number) => {
+    if (!user) return;
+
+    // Optimistic update or wait for server? Let's wait for server to ensure stock/validation
+    try {
+      // 1. Add new variant (merges if exists)
+      // If the new variant ID is 'original', it means we are reverting to the base product (no variant)
+      const variantIdToAdd = newVariant.id === 'original' ? undefined : newVariant.id;
+      await db.addToCart(user._id, product._id, variantIdToAdd, quantity);
+      
+      // 2. Remove old variant
+      await db.removeFromCart(user._id, product._id, oldVariantId);
+
+      // 3. Refresh cart state (easiest way to ensure correct merged quantities)
+      const updatedCart = await db.getCart(user._id);
+      setCart(updatedCart);
+      
+    } catch (error) {
+      console.error('Failed to update variant:', error);
+      alert('Failed to update variant. Please try again.');
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -246,7 +270,7 @@ const App: React.FC = () => {
       isAuthModalOpen,
       setAuthModalOpen
     }}>
-      <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart }}>
+      <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, updateItemVariant }}>
         <Router>
           <ScrollToTop />
           <AppRoutes />
