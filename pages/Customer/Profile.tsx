@@ -52,7 +52,21 @@ export const Profile: React.FC = () => {
   }, [user, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    // For contact number, only allow numeric input
+    if (name === 'contactNumber') {
+      const numericValue = value.replace(/[^0-9]/g, '');
+      setFormData({ ...formData, [name]: numericValue });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  const validatePhoneNumber = (phone: string): boolean => {
+    // Philippine mobile format: 09XXXXXXXXX (11 digits total)
+    const phoneRegex = /^09\d{9}$/;
+    return phoneRegex.test(phone);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,6 +74,13 @@ export const Profile: React.FC = () => {
     setIsLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
+
+    // Contact number validation
+    if (formData.contactNumber && !validatePhoneNumber(formData.contactNumber)) {
+      setErrorMsg('Contact number must be in the format 09XXXXXXXXX (11 digits, starting with 09).');
+      setIsLoading(false);
+      return;
+    }
 
     // Password validation
     if (formData.newPassword) {
@@ -175,9 +196,14 @@ export const Profile: React.FC = () => {
                                       name="contactNumber" 
                                       value={formData.contactNumber} 
                                       onChange={handleChange}
+                                      maxLength={11}
+                                      placeholder="09171234567"
                                       className="w-full pl-9 p-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
                                   />
                               </div>
+                              {formData.contactNumber && !validatePhoneNumber(formData.contactNumber) && (
+                                <p className="text-xs text-red-500 mt-1">Must be 11 digits starting with 09</p>
+                              )}
                           </div>
                       </div>
                       

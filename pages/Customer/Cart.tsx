@@ -132,7 +132,7 @@ export const Cart: React.FC = () => {
             setCheckoutForm(prev => ({
                 ...prev,
                 recipientName: user.name || '',
-                contactNumber: '',
+                contactNumber: user.contactNumber || '',
                 street: '',
                 landmark: '',
                 city: '',
@@ -142,6 +142,18 @@ export const Cart: React.FC = () => {
             }));
         }
     }, [user]);
+
+    const validatePhoneNumber = (phone: string): boolean => {
+        // Philippine mobile format: 09XXXXXXXXX (11 digits total)
+        const phoneRegex = /^09\d{9}$/;
+        return phoneRegex.test(phone);
+    };
+
+    const handleContactNumberChange = (value: string) => {
+        // Only allow numeric input
+        const numericValue = value.replace(/[^0-9]/g, '');
+        setCheckoutForm({ ...checkoutForm, contactNumber: numericValue });
+    };
 
     const toggleItem = (key: string) => {
         const newSelected = new Set(selectedItems);
@@ -181,6 +193,18 @@ export const Cart: React.FC = () => {
     const handlePlaceOrder = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) return;
+        
+        // Validate contact number
+        if (!checkoutForm.contactNumber) {
+            alert('Contact number is required.');
+            return;
+        }
+        
+        if (!validatePhoneNumber(checkoutForm.contactNumber)) {
+            alert('Contact number must be in the format 09XXXXXXXXX (11 digits, starting with 09).');
+            return;
+        }
+        
         setIsSubmitting(true);
         try {
             // Transform cart items to lightweight order items
@@ -517,10 +541,18 @@ export const Cart: React.FC = () => {
                                                             type="tel"
                                                             required
                                                             value={checkoutForm.contactNumber}
-                                                            onChange={e => setCheckoutForm({ ...checkoutForm, contactNumber: e.target.value })}
-                                                            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
-                                                            placeholder="0917 123 4567"
+                                                            onChange={e => handleContactNumberChange(e.target.value)}
+                                                            maxLength={11}
+                                                            className={`w-full pl-9 pr-4 py-2.5 rounded-xl border focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm ${
+                                                                checkoutForm.contactNumber && !validatePhoneNumber(checkoutForm.contactNumber)
+                                                                    ? 'border-red-300 focus:border-red-500'
+                                                                    : 'border-slate-200 focus:border-indigo-500'
+                                                            }`}
+                                                            placeholder="09171234567"
                                                         />
+                                                        {checkoutForm.contactNumber && !validatePhoneNumber(checkoutForm.contactNumber) && (
+                                                            <p className="text-xs text-red-500 mt-1">Must be 11 digits starting with 09</p>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
