@@ -137,3 +137,11 @@ export interface DashboardStats {
   activeCustomers: number;
   monthlyRevenue: number;
 }
+
+export interface StoreSettings {
+  _id?: string;
+  type: string;
+  storeName: string;
+  logoUrl?: string;
+  updatedAt?: Date;
+}

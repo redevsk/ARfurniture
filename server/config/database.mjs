@@ -39,7 +39,8 @@ export const getCollections = () => {
     products: database.collection('products'),
     orders: database.collection('orders'),
     banners: database.collection('banners'),
-    carts: database.collection('carts')
+    carts: database.collection('carts'),
+    settings: database.collection('settings')
   }
 }
 

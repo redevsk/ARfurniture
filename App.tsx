@@ -11,6 +11,7 @@ import { AdminDashboard } from './pages/Admin/Dashboard';
 import { ProductManager } from './pages/Admin/ProductManager';
 import { OrderManagement } from './pages/Admin/OrderManagement';
 import { MarketingManager } from './pages/Admin/MarketingManager';
+import { Settings } from './pages/Admin/Settings';
 import { AdminLogin } from './pages/Admin/AdminLogin.tsx';
 import { UserRole, CartItem, Product, User, Address, ProductVariant } from './types';
 import { loginUser, registerUser, updateUserAddress, loginAdmin } from './services/auth';
@@ -62,6 +63,9 @@ const AppRoutes: React.FC = () => {
             } />
             <Route path="/admin/marketing" element={
               user?.role === UserRole.ADMIN ? <MarketingManager /> : <Navigate to="/admin/login" replace />
+            } />
+            <Route path="/admin/settings" element={
+              user?.role === UserRole.ADMIN ? <Settings /> : <Navigate to="/admin/login" replace />
             } />
 
             {/* Fallback */}

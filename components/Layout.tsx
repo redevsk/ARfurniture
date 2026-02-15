@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ShoppingBag, Menu, X, Hexagon, User as UserIcon, LogOut, LogIn, Search, Heart } from 'lucide-react';
 import { UserRole } from '../types';
-import { APP_NAME, NAV_ITEMS_ADMIN } from '../constants';
+import { APP_NAME, NAV_ITEMS_ADMIN, resolveAssetUrl, getApiBaseUrl } from '../constants';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { AuthModal } from './AuthModal';
@@ -20,6 +20,26 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, logout, setAuthModalOpen, isAuthModalOpen } = useAuth();
   
   const [searchInput, setSearchInput] = useState(searchParams.get('q') || '');
+  const [storeSettings, setStoreSettings] = useState({ name: APP_NAME, logoUrl: '' });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/api/settings`);
+        if (res.ok) {
+          const data = await res.json();
+          setStoreSettings({
+            name: data.storeName || APP_NAME,
+            logoUrl: data.logoUrl || ''
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch store settings:', error);
+      }
+    };
+    fetchSettings();
+  }, [location.pathname]); // Re-fetch on navigation in case settings changed (e.g. from admin)
+
 
   const isAdmin = user?.role === UserRole.ADMIN;
   const cartItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -59,11 +79,19 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="flex-shrink-0">
               <Link to={isAdmin ? "/admin" : "/"} className="flex items-center gap-2 group">
                  <div className="flex items-center gap-2">
-                    <div className="p-2 bg-indigo-600 rounded-lg group-hover:bg-indigo-700 transition-colors">
-                      <Hexagon className="w-6 h-6 text-white fill-current" />
-                    </div>
+                    {storeSettings.logoUrl ? (
+                      <img 
+                        src={resolveAssetUrl(storeSettings.logoUrl)} 
+                        alt={storeSettings.name} 
+                        className="w-10 h-10 object-contain rounded-lg bg-white" 
+                      />
+                    ) : (
+                      <div className="p-2 bg-indigo-600 rounded-lg group-hover:bg-indigo-700 transition-colors">
+                        <Hexagon className="w-6 h-6 text-white fill-current" />
+                      </div>
+                    )}
                     <span className="text-xl font-bold text-slate-900 tracking-tight">
-                        {isAdmin ? 'Admin' : APP_NAME}
+                        {isAdmin ? 'Admin' : storeSettings.name}
                     </span>
                  </div>
               </Link>
@@ -278,10 +306,18 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center gap-2 mb-4 text-white">
-                 <div className="p-1.5 bg-indigo-600 rounded-md">
-                    <Hexagon className="w-5 h-5 text-white fill-current" />
-                 </div>
-                 <span className="text-2xl font-bold">{APP_NAME}</span>
+                 {storeSettings.logoUrl ? (
+                    <img 
+                      src={resolveAssetUrl(storeSettings.logoUrl)} 
+                      alt={storeSettings.name} 
+                      className="w-8 h-8 object-contain rounded bg-white p-0.5" 
+                    />
+                 ) : (
+                   <div className="p-1.5 bg-indigo-600 rounded-md">
+                      <Hexagon className="w-5 h-5 text-white fill-current" />
+                   </div>
+                 )}
+                 <span className="text-2xl font-bold">{storeSettings.name}</span>
               </div>
               <p className="text-slate-500 max-w-sm">
                 The premier destination for AR-enabled furniture shopping. Visualize perfection in your home before you buy.
@@ -303,7 +339,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
           </div>
           <div className="border-t border-slate-800 pt-8 text-center text-sm text-slate-500">
-            <p>© 2024 {APP_NAME}. All rights reserved.</p>
+            <p>© 2024 {storeSettings.name}. All rights reserved.</p>
           </div>
         </div>
       </footer>

@@ -219,4 +219,53 @@ router.post('/model',
   })
 )
 
+// Upload Logo endpoint
+router.post('/logo',
+  uploadImageToSupabase.single('file'),
+  validateFileUpload,
+  validateImageFile,
+  asyncHandler(async (req, res) => {
+    const supabase = getSupabaseClient()
+    if (!supabase) {
+      logger.error('Supabase not configured', null, { requestId: req.requestId })
+      return res.status(500).json({ error: 'Storage not configured' })
+    }
+    
+    // Use a fixed name or timestamped name in a 'settings' folder
+    const fileName = `logo-${Date.now()}-${sanitizeFileName(req.file.originalname)}`
+    const filePath = `settings/${fileName}`
+    
+    logger.info(`Uploading store logo: ${filePath}`, {
+      requestId: req.requestId,
+      size: req.file.size,
+      type: req.file.mimetype
+    })
+    
+    // Optional: Delete old logos if we want to keep it clean, 
+    // but might be safer to keep history for now or let admin delete manually (?)
+    // For now, let's just upload.
+    
+    const { error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(filePath, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true
+      })
+    
+    if (error) {
+      logger.error('Logo upload failed', error, { requestId: req.requestId, filePath })
+      throw error
+    }
+    
+    const { data: publicUrlData } = supabase.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(filePath)
+    
+    const url = publicUrlData.publicUrl
+    logger.success(`Store logo uploaded: ${fileName}`, { requestId: req.requestId, url })
+    
+    return res.json({ url })
+  })
+)
+
 export default router

@@ -21,6 +21,7 @@ import bannerRoutes from './routes/banners.mjs'
 import adminRoutes from './routes/admin.mjs'
 import cartRoutes from './routes/cart.mjs'
 import addressRoutes from './routes/address.mjs'
+import settingsRoutes from './routes/settings.mjs'
 
 // Utilities
 import logger from './utils/logger.mjs'
@@ -139,6 +140,7 @@ app.use('/api/banners', bannerRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/cart', cartRoutes)
 app.use('/api/address', addressRoutes)
+app.use('/api/settings', settingsRoutes)
 
 // =====================
 // ERROR HANDLING
