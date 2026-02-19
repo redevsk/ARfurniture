@@ -41,7 +41,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [location.pathname]); // Re-fetch on navigation in case settings changed (e.g. from admin)
 
 
-  const isAdmin = user?.role === UserRole.ADMIN;
+  const isAdmin = user?.role === UserRole.ADMIN || user?.role === UserRole.SUPERADMIN;
   const cartItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -307,48 +307,50 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-slate-400 py-12 mt-auto border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center gap-2 mb-4 text-white">
-                 {storeSettings.logoUrl ? (
-                    <img 
-                      src={resolveAssetUrl(storeSettings.logoUrl)} 
-                      alt={storeSettings.name} 
-                      className="w-8 h-8 object-contain rounded bg-white p-0.5" 
-                    />
-                 ) : (
-                   <div className="p-1.5 bg-indigo-600 rounded-md">
-                      <Hexagon className="w-5 h-5 text-white fill-current" />
-                   </div>
-                 )}
-                 <span className="text-2xl font-bold">{storeSettings.name}</span>
+      {!isAdmin && (
+        <footer className="bg-slate-900 text-slate-400 py-12 mt-auto border-t border-slate-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+              <div className="col-span-1 md:col-span-2">
+                <div className="flex items-center gap-2 mb-4 text-white">
+                  {storeSettings.logoUrl ? (
+                      <img 
+                        src={resolveAssetUrl(storeSettings.logoUrl)} 
+                        alt={storeSettings.name} 
+                        className="w-8 h-8 object-contain rounded bg-white p-0.5" 
+                      />
+                  ) : (
+                    <div className="p-1.5 bg-indigo-600 rounded-md">
+                        <Hexagon className="w-5 h-5 text-white fill-current" />
+                    </div>
+                  )}
+                  <span className="text-2xl font-bold">{storeSettings.name}</span>
+                </div>
+                <p className="text-slate-500 max-w-sm">
+                  The premier destination for AR-enabled furniture shopping. Visualize perfection in your home before you buy.
+                </p>
               </div>
-              <p className="text-slate-500 max-w-sm">
-                The premier destination for AR-enabled furniture shopping. Visualize perfection in your home before you buy.
-              </p>
+              <div>
+                <h4 className="text-white font-semibold mb-4">Shop</h4>
+                <ul className="space-y-2 text-sm">
+                  <li><Link to="/" className="hover:text-white transition-colors">New Arrivals</Link></li>
+                  <li><Link to="/?filter=sale" className="hover:text-white transition-colors">Sale</Link></li>
+                  <li><Link to="/cart" className="hover:text-white transition-colors">My Cart</Link></li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-white font-semibold mb-4">Admin</h4>
+                <ul className="space-y-2 text-sm">
+                  <li><Link to="/admin/login" className="hover:text-white transition-colors">Admin Login</Link></li>
+                </ul>
+              </div>
             </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Shop</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Link to="/" className="hover:text-white transition-colors">New Arrivals</Link></li>
-                <li><Link to="/?filter=sale" className="hover:text-white transition-colors">Sale</Link></li>
-                <li><Link to="/cart" className="hover:text-white transition-colors">My Cart</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Admin</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Link to="/admin/login" className="hover:text-white transition-colors">Admin Login</Link></li>
-              </ul>
+            <div className="border-t border-slate-800 pt-8 text-center text-sm text-slate-500">
+              <p>© 2024 {storeSettings.name}. All rights reserved.</p>
             </div>
           </div>
-          <div className="border-t border-slate-800 pt-8 text-center text-sm text-slate-500">
-            <p>© 2024 {storeSettings.name}. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 };

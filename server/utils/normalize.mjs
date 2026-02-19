@@ -20,5 +20,5 @@ export const normalizeAdmin = (doc = {}) => ({
   mname: doc.mname || '',
   lname: doc.lname,
   name: [doc.fname, doc.mname, doc.lname].filter(Boolean).join(' '),
-  role: 'admin'
+  role: doc.role || 'admin'
 })

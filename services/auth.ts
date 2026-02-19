@@ -103,7 +103,7 @@ export const loginAdmin = async (identifier: string, password: string): Promise<
       _id: data._id,
       name: fullName || data.username || 'Admin',
       email: data.email,
-      role: UserRole.ADMIN,
+      role: (data.role as UserRole) || UserRole.ADMIN,
       addresses: []
     };
   } catch (error) {

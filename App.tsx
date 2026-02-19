@@ -29,7 +29,7 @@ const AppRoutes: React.FC = () => {
 
   // Redirect authenticated admins from login page to dashboard
   useEffect(() => {
-    if (user?.role === UserRole.ADMIN && location.pathname === '/admin/login') {
+    if ((user?.role === UserRole.ADMIN || user?.role === UserRole.SUPERADMIN) && location.pathname === '/admin/login') {
       navigate('/admin', { replace: true });
     }
   }, [user, location.pathname, navigate]);
@@ -57,19 +57,19 @@ const AppRoutes: React.FC = () => {
 
             {/* Admin Routes */}
             <Route path="/admin" element={
-              user?.role === UserRole.ADMIN ? <AdminDashboard /> : <Navigate to="/admin/login" replace />
+              (user?.role === UserRole.ADMIN || user?.role === UserRole.SUPERADMIN) ? <AdminDashboard /> : <Navigate to="/admin/login" replace />
             } />
             <Route path="/admin/products" element={
-              user?.role === UserRole.ADMIN ? <ProductManager /> : <Navigate to="/admin/login" replace />
+              (user?.role === UserRole.ADMIN || user?.role === UserRole.SUPERADMIN) ? <ProductManager /> : <Navigate to="/admin/login" replace />
             } />
             <Route path="/admin/orders" element={
-              user?.role === UserRole.ADMIN ? <OrderManagement /> : <Navigate to="/admin/login" replace />
+              (user?.role === UserRole.ADMIN || user?.role === UserRole.SUPERADMIN) ? <OrderManagement /> : <Navigate to="/admin/login" replace />
             } />
             <Route path="/admin/marketing" element={
-              user?.role === UserRole.ADMIN ? <MarketingManager /> : <Navigate to="/admin/login" replace />
+              (user?.role === UserRole.ADMIN || user?.role === UserRole.SUPERADMIN) ? <MarketingManager /> : <Navigate to="/admin/login" replace />
             } />
             <Route path="/admin/settings" element={
-              user?.role === UserRole.ADMIN ? <Settings /> : <Navigate to="/admin/login" replace />
+              (user?.role === UserRole.ADMIN || user?.role === UserRole.SUPERADMIN) ? <Settings /> : <Navigate to="/admin/login" replace />
             } />
 
             {/* Fallback */}
