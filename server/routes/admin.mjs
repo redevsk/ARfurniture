@@ -2,6 +2,7 @@ import express from 'express'
 import { asyncHandler } from '../middleware/errorHandler.mjs'
 import logger from '../utils/logger.mjs'
 import bcrypt from 'bcryptjs'
+import { ObjectId } from 'mongodb'
 import { normalizeAdmin } from '../utils/normalize.mjs'
 import { validateRequiredFields, validateEmail, validatePassword } from '../middleware/validators.mjs'
 
@@ -117,5 +118,102 @@ router.post('/staff',
     return res.status(201).json(normalizeAdmin({ ...newAdmin, _id: result.insertedId }))
   })
 )
+
+// Update admin
+router.put('/staff/:id', 
+  validateEmail,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params
+    const { fname, mname, lname, email, username, password, role } = req.body
+    
+    logger.request(req, `Updating staff member: ${id}`)
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid ID format' })
+    }
+
+    const adminsCollection = req.app.locals.collections.admins
+    
+    // Check if admin exists
+    const admin = await adminsCollection.findOne({ _id: new ObjectId(id) })
+    if (!admin) {
+      return res.status(404).json({ error: 'Staff member not found' })
+    }
+
+    // Validate role if provided
+    if (role && !['admin', 'superadmin'].includes(role)) {
+       return res.status(400).json({ error: 'Invalid role. Must be "admin" or "superadmin".' })
+    }
+    
+    // Check if email or username allows exists (excluding current user)
+    if (email || username) {
+      const existing = await adminsCollection.findOne({ 
+        $and: [
+          { _id: { $ne: new ObjectId(id) } }, // Exclude current user
+          { $or: [
+            { email: (email || '').toLowerCase() }, 
+            { username: (username || '').toLowerCase() }
+          ]}
+        ]
+      })
+      
+      if (existing) {
+        return res.status(400).json({ error: 'Email or Username already exists' })
+      }
+    }
+    
+    const updateData = {
+      ...(fname && { fname }),
+      ...(mname !== undefined && { mname }), // Allow clearing mname
+      ...(lname && { lname }),
+      ...(email && { email: email.toLowerCase() }),
+      ...(username && { username: username.toLowerCase() }),
+      ...(role && { role }),
+      updatedAt: new Date()
+    }
+
+    // Only hash and update password if provided
+    if (password && password.trim().length > 0) {
+      if (password.length < 6) {
+         return res.status(400).json({ error: 'Password must be at least 6 characters' })
+      }
+      updateData.password = await bcrypt.hash(password, 10)
+    }
+
+    await adminsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    )
+    
+    const updatedAdmin = await adminsCollection.findOne({ _id: new ObjectId(id) })
+    
+    logger.success(`Staff member updated: ${id}`, { requestId: req.requestId })
+    
+    return res.json(normalizeAdmin(updatedAdmin))
+  })
+)
+
+// Delete admin
+router.delete('/staff/:id', asyncHandler(async (req, res) => {
+  const { id } = req.params
+  
+  logger.request(req, `Deleting staff member: ${id}`)
+  
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({ error: 'Invalid ID format' })
+  }
+
+  const adminsCollection = req.app.locals.collections.admins
+  
+  const result = await adminsCollection.deleteOne({ _id: new ObjectId(id) })
+  
+  if (result.deletedCount === 0) {
+    return res.status(404).json({ error: 'Staff member not found' })
+  }
+  
+  logger.success(`Staff member deleted: ${id}`, { requestId: req.requestId })
+  
+  return res.json({ message: 'Staff member deleted successfully' })
+}))
 
 export default router

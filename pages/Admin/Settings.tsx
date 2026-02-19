@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Upload, Loader, Users, Shield, Trash2, Plus, X, Check } from 'lucide-react';
+import { Save, Upload, Loader, Users, Plus, X, Trash2, Edit } from 'lucide-react';
 import { StoreSettings, UserRole } from '../../types';
 import { APP_NAME } from '../../constants';
 import { resolveAssetUrl, getApiBaseUrl } from '../../constants';
@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 interface AdminUser {
   _id: string;
   fname: string;
+  mname: string; // Add middle name support
   lname: string;
   email: string;
   username: string;
@@ -25,9 +26,12 @@ export const Settings: React.FC = () => {
   // Staff Management State
   const [staff, setStaff] = useState<AdminUser[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
-  const [showAddStaffModal, setShowAddStaffModal] = useState(false);
-  const [newStaff, setNewStaff] = useState({
+  const [showModal, setShowModal] = useState(false);
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+  
+  const [staffForm, setStaffForm] = useState({
     fname: '',
+    mname: '',
     lname: '',
     email: '',
     username: '',
@@ -43,7 +47,7 @@ export const Settings: React.FC = () => {
 
   useEffect(() => {
     fetchSettings();
-    if (user?.role === 'superadmin' || (user as any)?.role === 'superadmin') { // Type guard/cast if UserRole enum doesn't have superadmin explicitly defined in frontend types yet
+    if (user?.role === 'superadmin' || (user as any)?.role === 'superadmin') {
       fetchStaff();
     }
   }, [user]);
@@ -147,40 +151,93 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const handleAddStaff = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const res = await fetch(`${getApiBaseUrl()}/api/admin/staff`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newStaff)
+  const openModal = (staffMember?: AdminUser) => {
+    if (staffMember) {
+      setEditingStaffId(staffMember._id);
+      setStaffForm({
+        fname: staffMember.fname,
+        mname: staffMember.mname || '',
+        lname: staffMember.lname,
+        email: staffMember.email,
+        username: staffMember.username,
+        role: staffMember.role,
+        password: ''
       });
-      
-      const data = await res.json();
-      
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to create staff member');
-      }
-      
-      setStaff([...staff, data]);
-      setShowAddStaffModal(false);
-      setNewStaff({
+    } else {
+      setEditingStaffId(null);
+      setStaffForm({
         fname: '',
+        mname: '',
         lname: '',
         email: '',
         username: '',
         password: '',
         role: 'admin'
       });
-      setMessage({ type: 'success', text: 'New staff member added successfully' });
+    }
+    setShowModal(true);
+  };
+
+  const handleStaffSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const url = editingStaffId 
+        ? `${getApiBaseUrl()}/api/admin/staff/${editingStaffId}`
+        : `${getApiBaseUrl()}/api/admin/staff`;
+        
+      const method = editingStaffId ? 'PUT' : 'POST';
+      
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(staffForm)
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to save staff member');
+      }
+      
+      if (editingStaffId) {
+        setStaff(staff.map(s => s._id === editingStaffId ? data : s));
+        setMessage({ type: 'success', text: 'Staff member updated successfully' });
+      } else {
+        setStaff([...staff, data]);
+        setMessage({ type: 'success', text: 'New staff member added successfully' });
+      }
+      
+      setShowModal(false);
       
     } catch (error: any) {
-      console.error('Error adding staff:', error);
-      // Show error in a toast or alert (using message state for now)
+      console.error('Error saving staff:', error);
       setMessage({ type: 'error', text: error.message });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteStaff = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this staff member? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/api/admin/staff/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to delete staff member');
+      }
+
+      setStaff(staff.filter(s => s._id !== id));
+      setMessage({ type: 'success', text: 'Staff member deleted successfully' });
+    } catch (error: any) {
+      console.error('Error deleting staff:', error);
+      setMessage({ type: 'error', text: error.message });
     }
   };
 
@@ -325,7 +382,7 @@ export const Settings: React.FC = () => {
               <p className="text-slate-500 mt-1 text-sm">Manage admin accounts and permissions.</p>
             </div>
             <button
-              onClick={() => setShowAddStaffModal(true)}
+              onClick={() => openModal()}
               className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
@@ -346,7 +403,9 @@ export const Settings: React.FC = () => {
                       {admin.fname[0]}{admin.lname[0]}
                     </div>
                     <div>
-                      <h4 className="font-semibold text-slate-900">{admin.fname} {admin.lname}</h4>
+                      <h4 className="font-semibold text-slate-900">
+                         {admin.fname} {admin.mname ? `${admin.mname} ` : ''}{admin.lname}
+                      </h4>
                       <div className="flex items-center gap-2 text-xs text-slate-500">
                         <span>@{admin.username}</span>
                         <span>•</span>
@@ -360,7 +419,23 @@ export const Settings: React.FC = () => {
                     }`}>
                       {admin.role.toUpperCase()}
                     </span>
-                    {/* Placeholder for future actions like delete/edit */}
+                    
+                    <div className="flex items-center gap-2">
+                         <button 
+                           onClick={() => openModal(admin)}
+                           className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                           title="Edit Admin"
+                         >
+                            <Edit className="w-4 h-4" />
+                         </button>
+                          <button 
+                           onClick={() => handleDeleteStaff(admin._id)}
+                           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                           title="Delete Admin"
+                         >
+                            <Trash2 className="w-4 h-4" />
+                         </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -369,39 +444,50 @@ export const Settings: React.FC = () => {
         </div>
       )}
 
-      {/* Add Staff Modal */}
-      {showAddStaffModal && (
+      {/* Add/Edit Staff Modal */}
+      {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-lg text-slate-900">Add New Admin</h3>
+              <h3 className="font-bold text-lg text-slate-900">
+                  {editingStaffId ? 'Edit Admin' : 'Add New Admin'}
+              </h3>
               <button 
-                onClick={() => setShowAddStaffModal(false)}
+                onClick={() => setShowModal(false)}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            <form onSubmit={handleAddStaff} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+            <form onSubmit={handleStaffSubmit} className="p-6 space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
                   <input
                     type="text"
                     required
-                    value={newStaff.fname}
-                    onChange={e => setNewStaff({...newStaff, fname: e.target.value})}
+                    value={staffForm.fname}
+                    onChange={e => setStaffForm({...staffForm, fname: e.target.value})}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
-                <div>
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Middle Name</label>
+                  <input
+                    type="text"
+                    value={staffForm.mname}
+                    onChange={e => setStaffForm({...staffForm, mname: e.target.value})}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  />
+                </div>
+                <div className="col-span-1">
                   <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
                   <input
                     type="text"
                     required
-                    value={newStaff.lname}
-                    onChange={e => setNewStaff({...newStaff, lname: e.target.value})}
+                    value={staffForm.lname}
+                    onChange={e => setStaffForm({...staffForm, lname: e.target.value})}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
@@ -412,8 +498,8 @@ export const Settings: React.FC = () => {
                 <input
                   type="email"
                   required
-                  value={newStaff.email}
-                  onChange={e => setNewStaff({...newStaff, email: e.target.value})}
+                  value={staffForm.email}
+                  onChange={e => setStaffForm({...staffForm, email: e.target.value})}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
               </div>
@@ -424,16 +510,16 @@ export const Settings: React.FC = () => {
                   <input
                     type="text"
                     required
-                    value={newStaff.username}
-                    onChange={e => setNewStaff({...newStaff, username: e.target.value})}
+                    value={staffForm.username}
+                    onChange={e => setStaffForm({...staffForm, username: e.target.value})}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
                   <select
-                    value={newStaff.role}
-                    onChange={e => setNewStaff({...newStaff, role: e.target.value as any})}
+                    value={staffForm.role}
+                    onChange={e => setStaffForm({...staffForm, role: e.target.value as any})}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
                   >
                     <option value="admin">Admin</option>
@@ -443,22 +529,24 @@ export const Settings: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                    {editingStaffId ? 'New Password (leave blank to keep current)' : 'Password'}
+                </label>
                 <input
                   type="password"
-                  required
+                  required={!editingStaffId}
                   minLength={6}
-                  value={newStaff.password}
-                  onChange={e => setNewStaff({...newStaff, password: e.target.value})}
+                  value={staffForm.password}
+                  onChange={e => setStaffForm({...staffForm, password: e.target.value})}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                  placeholder="Min. 6 characters"
+                  placeholder={editingStaffId ? "Min. 6 characters (optional)" : "Min. 6 characters"}
                 />
               </div>
 
               <div className="pt-4 flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowAddStaffModal(false)}
+                  onClick={() => setShowModal(false)}
                   className="px-4 py-2 text-slate-700 font-medium hover:bg-slate-100 rounded-lg transition-colors"
                 >
                   Cancel
@@ -468,7 +556,7 @@ export const Settings: React.FC = () => {
                   disabled={saving}
                   className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 disabled:opacity-70"
                 >
-                  {saving ? 'Creating...' : 'Create Account'}
+                  {saving ? (editingStaffId ? 'Updating...' : 'Creating...') : (editingStaffId ? 'Update Account' : 'Create Account')}
                 </button>
               </div>
             </form>
