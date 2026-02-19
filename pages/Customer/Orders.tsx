@@ -88,7 +88,7 @@ export const Orders: React.FC = () => {
     <button
       onClick={() => setActiveTab(id)}
       className={`
-        flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all
+        flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap
         ${activeTab === id 
           ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
           : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 hover:border-slate-300'}
@@ -108,23 +108,23 @@ export const Orders: React.FC = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">My Orders</h1>
-          <p className="text-slate-500 mt-1">Track and manage your recent purchases</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">My Orders</h1>
+          <p className="text-sm sm:text-base text-slate-500 mt-1">Track and manage your recent purchases</p>
         </div>
         
         <button 
           onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-indigo-600 font-medium hover:text-indigo-700"
+          className="flex items-center gap-2 text-indigo-600 font-medium hover:text-indigo-700 self-start md:self-auto"
         >
           Continue Shopping <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-2 mb-8 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
         <StatusTab id="all" label="All Orders" />
         <StatusTab id="pending" label="Pending" icon={Clock} />
         <StatusTab id="processing" label="In Progress" icon={Package} />
@@ -153,27 +153,27 @@ export const Orders: React.FC = () => {
           filteredOrders.map((order) => (
             <div key={order._id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
               {/* Order Header */}
-              <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-4 justify-between items-center">
-                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              <div className="px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row gap-4 md:items-center justify-between">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-x-8 gap-y-4 text-sm">
                   <div>
-                    <div className="text-slate-500 mb-0.5">Order Placed</div>
+                    <div className="text-xs text-slate-500 mb-0.5 uppercase tracking-wider font-semibold">Ordered On</div>
                     <div className="font-medium text-slate-900">
                       {new Date(order.createdAt).toLocaleDateString(undefined, {
-                        year: 'numeric', month: 'long', day: 'numeric'
+                        year: 'numeric', month: 'short', day: 'numeric'
                       })}
                     </div>
                   </div>
                   <div>
-                    <div className="text-slate-500 mb-0.5">Total Amount</div>
+                    <div className="text-xs text-slate-500 mb-0.5 uppercase tracking-wider font-semibold">Total</div>
                     <div className="font-medium text-slate-900">{CURRENCY}{order.totalAmount.toLocaleString()}</div>
                   </div>
-                  <div>
-                    <div className="text-slate-500 mb-0.5">Order ID</div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <div className="text-xs text-slate-500 mb-0.5 uppercase tracking-wider font-semibold">Order ID</div>
                     <div className="font-mono font-medium text-slate-900">#{order._id.slice(-6).toUpperCase()}</div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between md:justify-end gap-3 pt-2 md:pt-0 border-t border-slate-200 md:border-none">
                   <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${getStatusColor(order.status)}`}>
                     {getStatusIcon(order.status)}
                     {order.status}
@@ -192,11 +192,11 @@ export const Orders: React.FC = () => {
               </div>
 
               {/* Order Items */}
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <div className="space-y-6">
                   {order.items.map((item, idx) => (
                     <div key={idx} className="flex gap-4">
-                      <div className="w-20 h-20 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 shrink-0">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 shrink-0">
                         <img 
                           src={item.imageUrl} 
                           alt={item.productName} 
@@ -204,9 +204,9 @@ export const Orders: React.FC = () => {
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-semibold text-slate-900 truncate pr-4">{item.productName}</h4>
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
+                          <div className="sm:pr-4">
+                            <h4 className="font-semibold text-slate-900 truncate-2-lines">{item.productName}</h4>
                             <div className="flex flex-wrap gap-2 mt-1">
                               {item.variantName && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600">
@@ -223,14 +223,13 @@ export const Orders: React.FC = () => {
                           </div>
                         </div>
                         
-                        <div className="mt-2 flex items-center gap-4">
+                        <div className="mt-2 text-right sm:text-left">
                           <button 
                             onClick={() => navigate(`/product/${item.productId}`)}
-                            className="text-sm text-indigo-600 hover:text-indigo-700 font-medium hover:underline"
+                            className="text-sm text-indigo-600 hover:text-indigo-700 font-medium hover:underline inline-flex items-center gap-1"
                           >
-                            View Product
+                            View Product <ChevronRight className="w-3 h-3" />
                           </button>
-                          {/* Could add a 'Buy Again' button here in the future */}
                         </div>
                       </div>
                     </div>
@@ -240,9 +239,13 @@ export const Orders: React.FC = () => {
               
               {/* Order Footer / Shipping Info */}
               {order.shippingAddress && (
-                <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 text-xs text-slate-500">
-                  <span className="font-medium text-slate-700">Shipping to:</span>{' '}
-                  {order.shippingAddress.fullName || order.customerName}, {order.shippingAddress.street}, {order.shippingAddress.city}
+                <div className="px-4 sm:px-6 py-4 bg-slate-50 border-t border-slate-200 text-xs text-slate-500">
+                  <div className="flex flex-col sm:flex-row gap-1">
+                    <span className="font-medium text-slate-700 whitespace-nowrap">Shipping to:</span>
+                    <span className="truncate">
+                      {order.shippingAddress.fullName || order.customerName}, {order.shippingAddress.street}, {order.shippingAddress.city}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
