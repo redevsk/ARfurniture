@@ -77,6 +77,15 @@ export const AdminLogin: React.FC = () => {
         </form>
 
         <p className="mt-6 text-center text-xs text-slate-500">Only authorized admins can access</p>
+        
+        <div className="mt-4 text-center">
+            <button 
+              onClick={() => navigate('/')}
+              className="text-sm text-slate-600 hover:text-indigo-600 hover:underline flex items-center justify-center gap-1 mx-auto"
+            >
+              <ArrowRight className="w-4 h-4 rotate-180" /> Back to Store
+            </button>
+        </div>
       </div>
     </div>
   )

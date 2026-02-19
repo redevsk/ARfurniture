@@ -145,18 +145,22 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                           <div className="px-4 py-2 text-xs text-slate-500 border-b border-slate-100 mb-1">
                               Signed in as <br/><strong className="text-slate-900">{user.email}</strong>
                           </div>
-                          <Link 
-                            to="/profile" 
-                            className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                          >
-                             <UserIcon className="w-4 h-4" /> Profile
-                          </Link>
-                          <Link 
-                            to="/orders" 
-                            className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                          >
-                             <ShoppingBag className="w-4 h-4" /> My Orders
-                          </Link>
+                          {!isAdmin && (
+                            <>
+                              <Link 
+                                to="/profile" 
+                                className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                              >
+                                 <UserIcon className="w-4 h-4" /> Profile
+                              </Link>
+                              <Link 
+                                to="/orders" 
+                                className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                              >
+                                 <ShoppingBag className="w-4 h-4" /> My Orders
+                              </Link>
+                            </>
+                          )}
                           <button 
                             onClick={logout} 
                             className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md flex items-center gap-2"
@@ -346,7 +350,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
             </div>
             <div className="border-t border-slate-800 pt-8 text-center text-sm text-slate-500">
-              <p>© 2024 {storeSettings.name}. All rights reserved.</p>
+              <p>© 2026 {storeSettings.name}. All rights reserved.</p>
             </div>
           </div>
         </footer>
