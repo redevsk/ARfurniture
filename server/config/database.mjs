@@ -40,7 +40,9 @@ export const getCollections = () => {
     orders: database.collection('orders'),
     banners: database.collection('banners'),
     carts: database.collection('carts'),
-    settings: database.collection('settings')
+    settings: database.collection('settings'),
+    notifications: database.collection('notifications'),
+    password_resets: database.collection('password_resets')
   }
 }
 

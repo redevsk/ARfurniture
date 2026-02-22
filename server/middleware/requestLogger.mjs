@@ -11,10 +11,10 @@ export const requestIdMiddleware = (req, res, next) => {
 // Log incoming requests and responses
 export const requestLogger = (req, res, next) => {
   const startTime = Date.now()
-  
+
   // Redact sensitive data from body
   const bodyPreview = req.body ? JSON.stringify(redactSensitiveData(req.body)).slice(0, 200) : 'none'
-  
+
   logger.info(`→ ${req.method} ${req.url}`, {
     requestId: req.requestId,
     method: req.method,
@@ -29,14 +29,20 @@ export const requestLogger = (req, res, next) => {
   const originalJson = res.json
 
   // Override send to log response
-  res.send = function(data) {
-    logResponse(req, res, startTime, data)
+  res.send = function (data) {
+    if (!req._logged) {
+      logResponse(req, res, startTime, data)
+      req._logged = true
+    }
     return originalSend.call(this, data)
   }
 
   // Override json to log response
-  res.json = function(data) {
-    logResponse(req, res, startTime, data)
+  res.json = function (data) {
+    if (!req._logged) {
+      logResponse(req, res, startTime, data)
+      req._logged = true
+    }
     return originalJson.call(this, data)
   }
 
@@ -46,13 +52,13 @@ export const requestLogger = (req, res, next) => {
 // Helper to log response
 const logResponse = (req, res, startTime, data) => {
   const duration = Date.now() - startTime
-  const dataPreview = typeof data === 'string' 
-    ? data.slice(0, 200) 
+  const dataPreview = typeof data === 'string'
+    ? data.slice(0, 200)
     : JSON.stringify(data).slice(0, 200)
 
   const logLevel = res.statusCode >= 400 ? 'error' : 'info'
   const symbol = res.statusCode >= 400 ? '✗' : '✓'
-  
+
   logger[logLevel](`${symbol} ${req.method} ${req.url} ${res.statusCode} (${duration}ms)`, {
     requestId: req.requestId,
     method: req.method,
@@ -66,15 +72,15 @@ const logResponse = (req, res, startTime, data) => {
 // Redact sensitive fields from logging
 const redactSensitiveData = (obj) => {
   if (!obj || typeof obj !== 'object') return obj
-  
+
   const redacted = { ...obj }
   const sensitiveFields = ['password', 'passwordHash', 'token', 'resetToken', 'resetCode']
-  
+
   for (const field of sensitiveFields) {
     if (redacted[field]) {
       redacted[field] = '[REDACTED]'
     }
   }
-  
+
   return redacted
 }

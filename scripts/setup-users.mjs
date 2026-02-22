@@ -13,7 +13,7 @@ const db = client.db('arecommerce')
 const validator = {
   $jsonSchema: {
     bsonType: 'object',
-    required: ['email', 'password', 'fname', 'lname', 'contactNumber', 'address'],
+    required: ['email', 'password', 'fname', 'lname', 'contactNumber', 'addresses'],
     properties: {
       email: { bsonType: 'string' },
       password: { bsonType: 'string' },
@@ -21,14 +21,18 @@ const validator = {
       mname: { bsonType: 'string' },
       lname: { bsonType: 'string' },
       contactNumber: { bsonType: 'string' },
-      address: { bsonType: 'array' }
+      addresses: { bsonType: 'array' }
     }
   }
 }
 
 try {
   await db.createCollection('users', { validator })
-} catch {}
+} catch { }
+
+try {
+  await db.command({ collMod: 'users', validator })
+} catch { }
 
 await db.collection('users').createIndex({ email: 1 }, { unique: true })
 
@@ -44,18 +48,18 @@ const adminValidator = {
       email: { bsonType: 'string' },
       username: { bsonType: 'string' },
       password: { bsonType: 'string' },
-      role: { bsonType: 'string', enum: ['admin','superadmin'] }
+      role: { bsonType: 'string', enum: ['admin', 'superadmin'] }
     }
   }
 }
 
 try {
   await db.createCollection('admins', { validator: adminValidator })
-} catch {}
+} catch { }
 
 try {
   await db.command({ collMod: 'admins', validator: adminValidator })
-} catch {}
+} catch { }
 
 await db.collection('admins').createIndex({ username: 1 }, { unique: true })
 await db.collection('admins').createIndex({ email: 1 }, { unique: true })
