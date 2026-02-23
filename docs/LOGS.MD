@@ -103,3 +103,88 @@ Implemented **instant persistence** for variant operations:
 - Each variant add/delete triggers a full product update to maintain data consistency
 - Backend cleanup runs automatically as part of the product update flow
 - Deletion logic handles both file-level (specific URLs) and folder-level (recursive) cleanup
+
+## 5. Local Storage Session Persistence
+**Date**: 2026-02-22
+
+### Problem
+Previously, the user session and cart state were only stored in React `useState`. This meant that refreshing the page would cause the user to be logged out and the cart to be cleared from the UI.
+
+### Solution
+Implemented browser `localStorage` persistence to ensure the user session and cart survive page reloads.
+
+#### Frontend Changes (`App.tsx`)
+1. **Initial State Hydration**:
+   - `user` state initialization now uses a lazy loader `() => { ... }` that attempts to retrieve and parse `arfurniture_user` from `localStorage`.
+   - Added error handling to gracefully remove malformed JSON from `localStorage` during parsing.
+
+2. **Session Preservation**:
+   - `handleUserLogin`, `handleAdminLogin`, and `handleSignup` now save the resolved `User` object into `localStorage` upon success.
+   - `handleUpdateUser` and `handleUpdateAddress` now mirror updates into `localStorage` to reflect inline profile changes persisting.
+   - `handleLogout` executes `localStorage.removeItem('arfurniture_user')` as cleanup.
+
+3. **Cart Rehydration**:
+   - Introduced a `useEffect` hook that fires only on component mount.
+   - If a `user` is hydrated from `localStorage` at startup, the app makes an immediate async database query `db.getCart(user._id)` to load their specific cart items into state.
+
+## 6. Notifications System for Order Status
+**Date**: 2026-02-22
+
+### Problem
+Users had no way of knowing when their order status changed unless they manually checked their orders page.
+
+### Solution
+Implemented a real-time notification system to alert users when their order status is updated by an admin.
+
+#### Backend Changes (`server/routes/notifications.mjs`, `server/routes/orders.mjs`)
+1. **Notifications Collection**: Added a new MongoDB collection to store user notifications.
+2. **Event Emitter Hook**: Set up an `EventEmitter` inside `notifications.mjs` dedicated to tracking new notifications globally across the server.
+3. **SSE Connection Stream**: Created a new `/api/notifications/stream/:userId` endpoint using Server-Sent Events (SSE) to forward pushes directly to users via `keep-alive` streams.
+4. **Order Status Trigger**: When an admin updates an order's status (e.g., pending -> shipped), a new notification is mapped to the DB, and the `notificationEmitter` immediately broadcasts it to listening clients.
+5. **Notification API**: Added standard routes to fetch previous notifications for a user, mark a single notification as read, and mark all notifications as read.
+
+#### Frontend Changes (`components/Layout.tsx`, etc.)
+1. **Bell Icon**: Replaced the visual "Heart" icon in the top navigation with a functional "Bell" (Notifications) icon for logged-in customers.
+2. **Unread Badge**: The Bell icon now displays a red badge with the count of unread notifications.
+3. **Notifications Dropdown**: Clicking the Bell opens a dropdown displaying recent notifications, sorted by date. Users can click notifications to mark them as read or click "Mark all as read" to clear the badge.
+4. **Real-time Webhook (SSE)**: The layout component sets up a Server-Sent Events (SSE) `EventSource` connection to listen for push notifications from the server via an `EventEmitter`, eliminating the need to actively poll while providing instant updates.
+
+## 7. Password Reset Data Modeling (Security & Architecture Improvement)
+**Date**: 2026-02-22
+
+### Problem
+Previously, password reset tokens and expiration dates were stored directly on the `users` document in MongoDB. This cluttered the user schema, coupled authentication flows tightly to user records, and made it difficult in the future to track multiple concurrent reset requests or efficiently clean up expired tokens without scanning the entire users collection.
+
+### Solution
+Migrated the password reset state into a dedicated `password_resets` collection.
+
+#### Backend Changes (`server/routes/auth.mjs`, `server/config/database.mjs`)
+1. **Dedicated Collection (`password_resets`)**: Introduced a new collection specifically to handle ephemeral reset tokens.
+2. **Token Generation (`/forgot-password`)**: Instead of `users.updateOne`, the API now creates a standalone document in `password_resets` containing the `email`, `userId`, `resetCode`, `resetToken`, `expiresAt`, and `attempts`. It first deletes any existing tokens for that email to ensure only the latest token is active.
+3. **Token Verification (`/forgot-password/verify-code`)**: The verification endpoint queries the `password_resets` collection directly using the token. It handles attempt counting and expiration verification natively on the reset document. Exceeded attempts or expired tokens result in the deletion of the token document instead of leaving dirty fields on the user record.
+4. **Password Reset Execution (`/forgot-password/reset-password`)**: Validates the token and code from the `password_resets` collection, fetches the associated user by ID, hashes the new password, updates the user's document, and cleans up the token document.
+
+### Benefits
+- ✅ **Cleaner User Schema**: User documents no longer act as trash cans for temporary authentication state.
+- ✅ **Improved Security**: Reset tokens are isolated. Failed attempts and expirations result in immediate cascading deletion of the token, leaving zero residue.
+- ✅ **Database Performance**: Querying for reset tokens happens on a smaller, dedicated collection, enabling easier indexing and TTL (Time-To-Live) index implementation if needed.
+
+## 8. Order Status Email Notifications
+**Date**: 2026-02-22
+
+### Problem
+While users received in-app notifications for order status changes, they did not receive emails, making it easy to miss updates if they weren't actively checking the application.
+
+### Solution
+Implemented an automated SMTP email notification system that triggers whenever an admin updates the status of an order.
+
+#### Backend Changes (`server/email-helper.mjs`, `server/routes/orders.mjs`)
+1. **New Email Template (`sendOrderStatusEmail`)**: Created a modern, responsive HTML email template using inline CSS for maximum compatibility. The template includes dynamic styling (e.g., color-coded badges) based on the specific status (Pending, Processing, Shipped, Delivered, Cancelled).
+2. **Order Router Integration**: Modified the `PATCH /:id/status` endpoint to call `sendOrderStatusEmail` after successfully updating the database and emitting the in-app notification.
+3. **Data Resolution & Fallback**: Added cross-collection logic to resolve the customer's email and name. If the order document itself lacks an email (e.g., older orders), the system falls back to querying the `users` collection using the `userId` attached to the order.
+4. **Resiliency**: The email sending process is asynchronous and wraps errors cleanly so that a failed email does not prevent the order status from being updated in the database or the in-app notification from being sent.
+
+### Benefits
+- ✅ **Proactive Communication**: Customers are immediately informed of order progress without needing to open the app.
+- ✅ **Consistent Branding**: The email template perfectly matches the existing premium application aesthetic.
+- ✅ **Robust Fallbacks**: The system intelligently recovers missing contact information from the user profile.

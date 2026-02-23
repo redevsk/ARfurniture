@@ -84,14 +84,36 @@ const AppRoutes: React.FC = () => {
 // --- Main App Component ---
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  // Initialize user from localStorage
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const savedUser = localStorage.getItem('arfurniture_user');
+      if (savedUser) {
+        return JSON.parse(savedUser);
+      }
+    } catch (error) {
+      console.error('Failed to parse saved user:', error);
+      localStorage.removeItem('arfurniture_user');
+    }
+    return null;
+  });
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
+
+  // Load cart on initial mount if user exists (was persisted)
+  useEffect(() => {
+    if (user) {
+      db.getCart(user._id).then(setCart).catch(console.error);
+    }
+    // Only run on initial mount to fetch initial cart for persisted user
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Customer login only
   const handleUserLogin = async (email: string, pass: string) => {
     const customer = await loginUser(email, pass);
     setUser(customer);
+    localStorage.setItem('arfurniture_user', JSON.stringify(customer));
     // Load cart from database after login
     try {
       const userCart = await db.getCart(customer._id);
@@ -106,12 +128,14 @@ const App: React.FC = () => {
   const handleAdminLogin = async (identifier: string, pass: string) => {
     const admin = await loginAdmin(identifier, pass);
     setUser(admin);
+    localStorage.setItem('arfurniture_user', JSON.stringify(admin));
     return admin;
   };
 
   const handleSignup = async (fname: string, lname: string, email: string, pass: string, mname = '') => {
     const user = await registerUser(fname, lname, email, pass, mname);
     setUser(user);
+    localStorage.setItem('arfurniture_user', JSON.stringify(user));
     // Load cart from database after signup (will be empty for new users)
     try {
       const userCart = await db.getCart(user._id);
@@ -125,17 +149,21 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setUser(null);
     setCart([]); // Clear cart on logout
+    localStorage.removeItem('arfurniture_user');
   };
 
   const handleUpdateAddress = async (address: Address) => {
     if (user) {
       await updateUserAddress(user._id, address);
-      setUser({ ...user, addresses: user.addresses ? user.addresses.map(a => a.id === address.id ? address : a) : [address] });
+      const updatedUser = { ...user, addresses: user.addresses ? user.addresses.map(a => a.id === address.id ? address : a) : [address] };
+      setUser(updatedUser);
+      localStorage.setItem('arfurniture_user', JSON.stringify(updatedUser));
     }
   };
 
   const handleUpdateUser = (updatedUser: User) => {
     setUser(updatedUser);
+    localStorage.setItem('arfurniture_user', JSON.stringify(updatedUser));
   };
 
   // Cart Handlers - Require authentication
@@ -226,14 +254,14 @@ const App: React.FC = () => {
       // If the new variant ID is 'original', it means we are reverting to the base product (no variant)
       const variantIdToAdd = newVariant.id === 'original' ? undefined : newVariant.id;
       await db.addToCart(user._id, product._id, variantIdToAdd, quantity);
-      
+
       // 2. Remove old variant
       await db.removeFromCart(user._id, product._id, oldVariantId);
 
       // 3. Refresh cart state (easiest way to ensure correct merged quantities)
       const updatedCart = await db.getCart(user._id);
       setCart(updatedCart);
-      
+
     } catch (error) {
       console.error('Failed to update variant:', error);
       alert('Failed to update variant. Please try again.');
