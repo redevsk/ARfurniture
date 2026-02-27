@@ -60,7 +60,7 @@ const BannerCarousel: React.FC<{ banners: MarketingBanner[] }> = ({ banners }) =
         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
       >
         {banners.map((banner) => (
-          <div key={banner._id} className="min-w-full flex flex-col md:flex-row relative">
+          <div key={banner._id} className="min-w-full flex flex-col md:flex-row relative overflow-hidden">
             {banner.badgeText && (
               <div className="absolute top-0 left-0 z-10">
                 <div className="bg-[#CD3C32] text-white text-xs font-bold px-8 py-1 shadow-md transform -rotate-45 -translate-x-8 translate-y-4 w-32 text-center">
