@@ -38,7 +38,7 @@ export const getCollections = () => {
     admins: database.collection('admins'),
     products: database.collection('products'),
     orders: database.collection('orders'),
-    banners: database.collection('banners'),
+    banners: database.collection('marketing_banners'),
     carts: database.collection('carts'),
     settings: database.collection('settings'),
     notifications: database.collection('notifications'),
