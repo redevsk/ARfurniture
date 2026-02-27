@@ -69,10 +69,10 @@ export const ProductManager: React.FC = () => {
     arModelUrl: '',
     width: '',
     height: '',
-    depth: '',
     unit: 'cm' as 'cm' | 'in',
     isFeatured: false,
-    isNewArrival: false
+    isNewArrival: false,
+    isSale: false
   });
 
   // Helper to ensure input values are never undefined
@@ -117,11 +117,10 @@ export const ProductManager: React.FC = () => {
       imageUrl: product.imageUrl || '',
       arModelUrl: product.arModelUrl || '',
       width: product.dimensions?.width?.toString() || '',
-      height: product.dimensions?.height?.toString() || '',
-      depth: product.dimensions?.depth?.toString() || '',
       unit: product.dimensions?.unit || 'cm',
       isFeatured: product.isFeatured || false,
-      isNewArrival: product.isNewArrival || false
+      isNewArrival: product.isNewArrival || false,
+      isSale: product.isSale || false
     });
     // Reset upload states but show existing filenames
     setImageFile(null);
@@ -149,10 +148,10 @@ export const ProductManager: React.FC = () => {
       arModelUrl: '',
       width: '',
       height: '',
-      depth: '',
       unit: 'cm',
       isFeatured: false,
-      isNewArrival: false
+      isNewArrival: false,
+      isSale: false
     });
     // Reset upload states
     setImageFile(null);
@@ -562,7 +561,8 @@ export const ProductManager: React.FC = () => {
           unit: formData.unit
         },
         isFeatured: formData.isFeatured,
-        isNewArrival: formData.isNewArrival
+        isNewArrival: formData.isNewArrival,
+        isSale: formData.isSale
       };
 
       if (editingId) {
@@ -591,10 +591,10 @@ export const ProductManager: React.FC = () => {
         arModelUrl: '',
         width: '',
         height: '',
-        depth: '',
         unit: 'cm',
         isFeatured: false,
-        isNewArrival: false
+        isNewArrival: false,
+        isSale: false
       });
       // Reset upload states
       setImageFile(null);
@@ -698,6 +698,7 @@ export const ProductManager: React.FC = () => {
                       <div className="flex flex-col gap-1">
                         {product.isFeatured && <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded w-fit">Featured</span>}
                         {product.isNewArrival && <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded w-fit">New</span>}
+                        {product.isSale && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded w-fit">Sale</span>}
                         {product.arModelUrl && <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded w-fit">AR Ready</span>}
                       </div>
                     </td>
@@ -850,12 +851,16 @@ export const ProductManager: React.FC = () => {
                       <label className="block text-sm font-semibold text-slate-900 mb-2">Tags & Collections</label>
                       <div className="flex flex-col gap-2">
                         <label className="flex items-center gap-2 cursor-pointer">
-                          <input type="checkbox" name="isFeatured" checked={formData.isFeatured} onChange={handleInputChange} className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" />
+                          <input type="checkbox" name="isFeatured" checked={!!formData.isFeatured} onChange={handleInputChange} className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" />
                           <span className="text-sm text-slate-700">Featured Collection</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
-                          <input type="checkbox" name="isNewArrival" checked={formData.isNewArrival} onChange={handleInputChange} className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500" />
+                          <input type="checkbox" name="isNewArrival" checked={!!formData.isNewArrival} onChange={handleInputChange} className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500" />
                           <span className="text-sm text-slate-700">New Arrival</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <input type="checkbox" name="isSale" checked={!!formData.isSale} onChange={handleInputChange} className="w-4 h-4 text-[#CD3C32] rounded border-slate-300 focus:ring-red-500" />
+                          <span className="text-sm text-slate-700 group-hover:text-red-700 transition-colors">On Sale</span>
                         </label>
                       </div>
                     </div>
@@ -1108,6 +1113,8 @@ export const ProductManager: React.FC = () => {
                     </div>
                   </div>
                 </div>
+
+
               </form>
             </div>
 

@@ -24,6 +24,9 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => (
         {product.isFeatured && (
           <span className="bg-indigo-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">Featured</span>
         )}
+        {product.isSale && (
+          <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">Sale</span>
+        )}
       </div>
       <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
         <ArrowRight className="w-4 h-4 text-indigo-600" />
@@ -157,9 +160,7 @@ export const Shop: React.FC = () => {
     let matchesSpecial = true;
     if (specialFilter === 'new') matchesSpecial = product.isNewArrival || false;
     if (specialFilter === 'featured') matchesSpecial = product.isFeatured || false;
-
-    // Mock Logic for Sale (e.g. price < 5000)
-    if (specialFilter === 'sale') matchesSpecial = product.price < 5000;
+    if (specialFilter === 'sale') matchesSpecial = product.isSale || false;
 
     return matchesSearch && matchesCategory && matchesSpecial;
   });

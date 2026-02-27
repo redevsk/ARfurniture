@@ -42,6 +42,7 @@ export interface Product {
   dimensions: Dimensions;
   isFeatured?: boolean;
   isNewArrival?: boolean;
+  isSale?: boolean;
   color?: string; // Main product color (hex or name)
   colorName?: string; // Added color name (e.g., "Light Oak")
   variants?: ProductVariant[]; // Added variants support

@@ -18,6 +18,7 @@ const FALLBACK_PRODUCTS: Product[] = [
     dimensions: { width: 84, height: 84, depth: 85, unit: 'cm' },
     isFeatured: true,
     isNewArrival: false,
+    isSale: false,
     createdAt: new Date(),
   },
 ];
