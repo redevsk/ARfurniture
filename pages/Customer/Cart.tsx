@@ -551,10 +551,10 @@ export const Cart: React.FC = () => {
                                                             }`}
                                                             placeholder="09171234567"
                                                         />
-                                                        {checkoutForm.contactNumber && !validatePhoneNumber(checkoutForm.contactNumber) && (
-                                                            <p className="text-xs text-red-500 mt-1">Must be 11 digits starting with 09</p>
-                                                        )}
                                                     </div>
+                                                    {checkoutForm.contactNumber && !validatePhoneNumber(checkoutForm.contactNumber) && (
+                                                        <p className="text-xs text-red-500 mt-1">Must be 11 digits starting with 09</p>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
