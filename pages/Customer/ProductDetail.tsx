@@ -51,8 +51,13 @@ export const ProductDetail: React.FC = () => {
         setProduct(currentProduct);
 
         if (currentProduct) {
-          setSelectedVariant(undefined);
-          setActiveImage(resolveAssetUrl(currentProduct.imageUrl));
+          const variantParam = searchParams.get('variant');
+          let initialVariant = undefined;
+          if (variantParam && currentProduct.variants) {
+            initialVariant = currentProduct.variants.find(v => v.id === variantParam);
+          }
+          setSelectedVariant(initialVariant);
+          setActiveImage(resolveAssetUrl(initialVariant ? initialVariant.imageUrl : currentProduct.imageUrl));
 
           // Filter related products: Same category, exclude current
           const related = allProducts
@@ -86,9 +91,10 @@ export const ProductDetail: React.FC = () => {
       setShowARLaunch(true);
       // Clear the ar param from URL
       searchParams.delete('ar');
+      searchParams.delete('variant');
       setSearchParams(searchParams, { replace: true });
     }
-  }, [searchParams, product, loading]);
+  }, [searchParams, product, loading, setSearchParams]);
 
   // Function to trigger AR on model-viewer
   const launchAR = () => {
@@ -142,7 +148,7 @@ export const ProductDetail: React.FC = () => {
           <div className="text-center max-w-sm">
             {/* Product preview */}
             <div className="w-32 h-32 mx-auto mb-6 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
-              <img src={resolveAssetUrl(product.imageUrl)} alt={product.name} className="w-full h-full object-cover" />
+              <img src={resolveAssetUrl(selectedVariant ? selectedVariant.imageUrl : product.imageUrl)} alt={product.name} className="w-full h-full object-cover" />
             </div>
 
             <h1 className="text-2xl font-bold text-white mb-2">{product.name}</h1>
@@ -250,13 +256,12 @@ export const ProductDetail: React.FC = () => {
             <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mt-2 mb-2">{product.name}</h1>
             <div className="flex items-center justify-between mb-8">
               <div className="text-4xl font-bold text-slate-900">{CURRENCY}{product.price.toLocaleString()}</div>
-              <div className={`text-sm font-medium px-3 py-1 rounded-full ${
-                (selectedVariant?.stock ?? product.stock) > 0 
-                  ? 'bg-slate-100 text-slate-600' 
+              <div className={`text-sm font-medium px-3 py-1 rounded-full ${(selectedVariant?.stock ?? product.stock) > 0
+                  ? 'bg-slate-100 text-slate-600'
                   : 'bg-red-50 text-red-600'
-              }`}>
-                {(selectedVariant?.stock ?? product.stock) > 0 
-                  ? `${selectedVariant?.stock ?? product.stock} available` 
+                }`}>
+                {(selectedVariant?.stock ?? product.stock) > 0
+                  ? `${selectedVariant?.stock ?? product.stock} available`
                   : 'Out of Stock'}
               </div>
             </div>
@@ -457,6 +462,7 @@ export const ProductDetail: React.FC = () => {
         onClose={() => setIsQRModalOpen(false)}
         productId={product._id}
         productName={product.name}
+        variantId={selectedVariant?.id}
       />
     </div>
   );
