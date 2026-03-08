@@ -1,8 +1,9 @@
 
 import { Product, Order, MarketingBanner, DashboardStats, CartItem, OrderItem } from '../types';
+import { getApiBaseUrl } from '../constants';
 
 // API Base URL - uses the auth server
-const API_BASE = (import.meta as any).env?.VITE_AUTH_API_BASE?.replace(/\/$/, '') || 'http://localhost:4000';
+const API_BASE = getApiBaseUrl();
 
 // Fallback data for when API is unavailable
 const FALLBACK_PRODUCTS: Product[] = [
@@ -121,14 +122,14 @@ class Database {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(order)
     });
-    
+
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({ error: 'Failed to create order' }));
       const error: any = new Error(errorData.error || 'Failed to create order');
       error.response = { data: errorData };
       throw error;
     }
-    
+
     const data = await res.json();
     return { ...data, createdAt: new Date(data.createdAt) };
   }
@@ -181,7 +182,7 @@ class Database {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' }
     });
-    
+
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({ error: 'Failed to cancel order' }));
       throw new Error(errorData.error || 'Failed to cancel order');
@@ -263,7 +264,7 @@ class Database {
   }
 
   async removeFromCart(userId: string, productId: string, variantId?: string): Promise<void> {
-    const url = variantId 
+    const url = variantId
       ? `${API_BASE}/api/cart/${userId}/items/${productId}?variantId=${encodeURIComponent(variantId)}`
       : `${API_BASE}/api/cart/${userId}/items/${productId}`;
     const res = await fetch(url, { method: 'DELETE' });

@@ -24,6 +24,7 @@ export const requestLogger = (req, res, next) => {
     userAgent: req.get('user-agent')
   })
 
+  /* 
   // Capture original functions
   const originalSend = res.send
   const originalJson = res.json
@@ -45,6 +46,7 @@ export const requestLogger = (req, res, next) => {
     }
     return originalJson.call(this, data)
   }
+  */
 
   next()
 }

@@ -252,15 +252,23 @@ router.post('/forgot-password',
       createdAt: new Date()
     })
 
-    // Send email (async, don't wait)
+    // Send email (await it to see if it works on Vercel)
     const fullName = [user.fname, user.lname].filter(Boolean).join(' ')
-    sendPasswordResetEmail({
-      email: user.email,
-      fullName: fullName,
-      resetCode: resetCode
-    }).catch(error => {
-      logger.error('Failed to send password reset email', error, { requestId: req.requestId, email: normalizedEmail })
-    })
+    try {
+      const emailResult = await sendPasswordResetEmail({
+        email: user.email,
+        fullName: fullName,
+        resetCode: resetCode
+      })
+
+      if (!emailResult.success) {
+        logger.error('Failed to send password reset email (Brevo Error)', emailResult.error, { requestId: req.requestId, email: normalizedEmail })
+      } else {
+        logger.success(`Email sent successfully via Brevo: ${emailResult.messageId}`, { requestId: req.requestId })
+      }
+    } catch (error) {
+      logger.error('Failed to send password reset email (Unexpected Error)', error.message, { requestId: req.requestId, email: normalizedEmail })
+    }
 
     logger.success(`Password reset email sent: ${normalizedEmail}`, { requestId: req.requestId })
 

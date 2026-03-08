@@ -4,6 +4,8 @@ import logger from '../utils/logger.mjs'
 let client = null
 let db = null
 
+export const isConnected = () => !!db
+
 export const connectDatabase = async (uri) => {
   if (!uri) {
     const error = new Error('MONGODB_URI environment variable is required')

@@ -1,7 +1,7 @@
 import { User, UserRole, Address } from '../types';
+import { getApiBaseUrl } from '../constants';
 
-const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined;
-const AUTH_API_BASE = (metaEnv?.VITE_AUTH_API_BASE || 'http://localhost:4000').replace(/\/$/, '');
+const AUTH_API_BASE = getApiBaseUrl();
 
 console.log('Auth API Base URL:', AUTH_API_BASE);
 
@@ -54,18 +54,18 @@ export const resetPassword = async (resetToken: string, code: string, newPasswor
 // Customer Login
 export const loginUser = async (email: string, password: string): Promise<User> => {
   console.log('→ Attempting customer login...');
-  
+
   try {
     const res = await fetch(`${AUTH_API_BASE}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.trim(), password })
     });
-    
+
     const data = await parseResponse(res);
     const fullName = data.name || [data.fname, data.mname, data.lname].filter(Boolean).join(' ');
     console.log('✓ Customer login successful');
-    
+
     return {
       _id: data._id,
       name: fullName,
@@ -87,18 +87,18 @@ export const loginUser = async (email: string, password: string): Promise<User> 
 export const loginAdmin = async (identifier: string, password: string): Promise<User> => {
   console.log('→ Attempting admin login for:', identifier);
   console.log('→ Calling:', `${AUTH_API_BASE}/api/auth/admins/login`);
-  
+
   try {
     const res = await fetch(`${AUTH_API_BASE}/api/auth/admins/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ identifier: identifier.trim(), password })
     });
-    
+
     const data = await parseResponse(res);
     const fullName = data.name || [data.fname, data.mname, data.lname].filter(Boolean).join(' ');
     console.log('✓ Admin login successful:', fullName);
-    
+
     return {
       _id: data._id,
       name: fullName || data.username || 'Admin',
@@ -151,10 +151,10 @@ export const updateUserProfile = async (
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, ...data })
   });
-  
+
   const updatedUser = await parseResponse(res);
   const fullName = updatedUser.name || [updatedUser.fname, updatedUser.mname, updatedUser.lname].filter(Boolean).join(' ');
-  
+
   return {
     _id: updatedUser._id,
     name: fullName,

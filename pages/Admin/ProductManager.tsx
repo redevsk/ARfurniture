@@ -1,18 +1,12 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { Plus, Edit2, Trash2, X, Save, Upload, Box, AlertCircle, Image, PlusCircle, Loader2 } from 'lucide-react';
 import { Product, ProductVariant } from '../../types';
 import { db } from '../../services/db';
-import { CURRENCY, resolveAssetUrl } from '../../constants';
+import { CURRENCY, resolveAssetUrl, getApiBaseUrl } from '../../constants';
 import { ColorPicker } from '../../components/ColorPicker';
 
-// Detect if running on localhost (laptop) vs dev tunnel (phone)
-const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const TUNNEL_URL = (import.meta as any).env?.VITE_AUTH_API_BASE?.replace(/\/$/, '') || 'http://localhost:4000';
-
-// When on localhost: upload to localhost (fast, no size limits), save tunnel URL for mobile
-// When on phone/tunnel: must upload through tunnel (may hit size limits)
-const UPLOAD_BASE = isLocalhost ? 'http://localhost:4000' : TUNNEL_URL;
+// API base for file uploads
+const UPLOAD_BASE = getApiBaseUrl();
 
 export const ProductManager: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -223,7 +217,7 @@ export const ProductManager: React.FC = () => {
     const folderName = encodeURIComponent(productName || 'uncategorized');
     const vName = variantName ? encodeURIComponent(variantName) : '';
 
-    const response = await fetch(`${UPLOAD_BASE}/api/upload/${type}?productName=${folderName}&variantName=${vName}`, {
+    const response = await fetch(`${UPLOAD_BASE} /api/upload / ${type}?productName = ${folderName}& variantName=${vName} `, {
       method: 'POST',
       body: formDataUpload
     });
@@ -244,7 +238,7 @@ export const ProductManager: React.FC = () => {
 
     const folderName = encodeURIComponent(productName || 'uncategorized');
 
-    const response = await fetch(`${UPLOAD_BASE}/api/upload/additional-image?productName=${folderName}`, {
+    const response = await fetch(`${UPLOAD_BASE} /api/upload / additional - image ? productName = ${folderName} `, {
       method: 'POST',
       body: formDataUpload
     });
@@ -259,7 +253,7 @@ export const ProductManager: React.FC = () => {
 
   // Delete additional image from server
   const deleteAdditionalImage = async (imageUrl: string): Promise<void> => {
-    await fetch(`${UPLOAD_BASE}/api/upload/additional-image?url=${encodeURIComponent(imageUrl)}`, {
+    await fetch(`${UPLOAD_BASE} /api/upload / additional - image ? url = ${encodeURIComponent(imageUrl)} `, {
       method: 'DELETE'
     });
   };
@@ -690,7 +684,7 @@ export const ProductManager: React.FC = () => {
                     <td className="px-6 py-4 text-slate-600 text-sm">{product.category}</td>
                     <td className="px-6 py-4 text-slate-900 font-medium text-sm">{CURRENCY}{product.price.toLocaleString()}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${product.stock > 10 ? 'bg-green-100 text-green-700' : product.stock > 0 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                      <span className={`px - 2 py - 1 rounded - full text - xs font - medium ${product.stock > 10 ? 'bg-green-100 text-green-700' : product.stock > 0 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'} `}>
                         {product.stock} units
                       </span>
                     </td>
@@ -908,7 +902,7 @@ export const ProductManager: React.FC = () => {
                       {additionalImages.map((img, index) => (
                         <div key={index} className="relative group">
                           <div className="aspect-square rounded-lg overflow-hidden border border-slate-200 bg-white">
-                            <img src={img} alt={`Additional ${index + 1}`} className="w-full h-full object-cover" />
+                            <img src={img} alt={`Additional ${index + 1} `} className="w-full h-full object-cover" />
                           </div>
                           <button
                             type="button"
@@ -946,7 +940,7 @@ export const ProductManager: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleEditVariant(v)}
-                              className={`p-1 rounded transition-colors ${editingVariantId === v.id ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50'}`}
+                              className={`p - 1 rounded transition - colors ${editingVariantId === v.id ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50'} `}
                               title="Edit variant"
                             >
                               <Edit2 className="w-4 h-4" />
@@ -966,7 +960,7 @@ export const ProductManager: React.FC = () => {
                   )}
 
                   {/* Add/Edit Variant Form */}
-                  <div id="variant-form" className={`p-3 rounded-lg border-2 transition-all space-y-3 ${editingVariantId ? 'bg-indigo-50/30 border-indigo-200' : 'bg-white border-slate-200'}`}>
+                  <div id="variant-form" className={`p - 3 rounded - lg border - 2 transition - all space - y - 3 ${editingVariantId ? 'bg-indigo-50/30 border-indigo-200' : 'bg-white border-slate-200'} `}>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
                         <div className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
@@ -1017,14 +1011,14 @@ export const ProductManager: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => setVariantFileType('image')}
-                            className={`px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${variantFileType === 'image' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400 hover:bg-slate-50'}`}
+                            className={`px - 3 py - 2 text - [10px] font - bold uppercase tracking - wider transition - colors ${variantFileType === 'image' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400 hover:bg-slate-50'} `}
                           >
                             <Image className="w-4 h-4 mx-auto" />
                           </button>
                           <button
                             type="button"
                             onClick={() => setVariantFileType('model')}
-                            className={`px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${variantFileType === 'model' ? 'bg-purple-600 text-white' : 'bg-white text-slate-400 hover:bg-slate-50'}`}
+                            className={`px - 3 py - 2 text - [10px] font - bold uppercase tracking - wider transition - colors ${variantFileType === 'model' ? 'bg-purple-600 text-white' : 'bg-white text-slate-400 hover:bg-slate-50'} `}
                           >
                             <Box className="w-4 h-4 mx-auto" />
                           </button>
@@ -1041,14 +1035,14 @@ export const ProductManager: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => variantFileInputRef.current?.click()}
-                          className={`flex-1 px-3 py-2 border border-dashed rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 h-[42px] transition-colors ${variantFile || (variantFileType === 'image' ? newVariant.imageUrl : newVariant.arModelUrl)
-                            ? (variantFileType === 'image' ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-purple-50 border-purple-200 text-purple-600')
-                            : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-slate-300'
-                            }`}
+                          className={`flex - 1 px - 3 py - 2 border border - dashed rounded - lg text - [10px] font - bold uppercase tracking - wider flex items - center justify - center gap - 2 h - [42px] transition - colors ${variantFile || (variantFileType === 'image' ? newVariant.imageUrl : newVariant.arModelUrl)
+                              ? (variantFileType === 'image' ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-purple-50 border-purple-200 text-purple-600')
+                              : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-slate-300'
+                            } `}
                         >
                           {variantFileType === 'image' ? <Image className="w-4 h-4" /> : <Box className="w-4 h-4" />}
                           {variantFile
-                            ? `New: ${variantFile.name}`
+                            ? `New: ${variantFile.name} `
                             : (variantFileType === 'image'
                               ? (newVariant.imageUrl ? 'Image Ready' : 'Upload Image')
                               : (newVariant.arModelUrl ? 'Model Ready' : 'Upload Model')
@@ -1061,7 +1055,7 @@ export const ProductManager: React.FC = () => {
                         type="button"
                         onClick={handleAddVariant}
                         disabled={uploadingVariant}
-                        className={`w-full h-[42px] px-4 flex items-center justify-center gap-2 rounded-lg transition-all shadow-sm font-medium text-sm ${editingVariantId ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-900 text-white hover:bg-slate-800'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                        className={`w - full h - [42px] px - 4 flex items - center justify - center gap - 2 rounded - lg transition - all shadow - sm font - medium text - sm ${editingVariantId ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-900 text-white hover:bg-slate-800'} disabled: opacity - 50 disabled: cursor - not - allowed`}
                       >
                         {uploadingVariant ? (
                           <>
